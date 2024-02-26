@@ -225,7 +225,7 @@ command_t* parse_command(char input[]) {
             if (regexes[i].expected_matches > 1) {
                 strncpy(
                     alarm_id_buffer,
-                    input+matches[1].rm_so,
+                    input + matches[1].rm_so,
                     matches[1].rm_eo - matches[1].rm_so
                 );
                 command->alarm_id = atoi(alarm_id_buffer);
@@ -236,7 +236,7 @@ command_t* parse_command(char input[]) {
             if (regexes[i].expected_matches > 2) {
                 strncpy(
                     time_buffer,
-                    input+matches[2].rm_so,
+                    input + matches[2].rm_so,
                     matches[2].rm_eo - matches[2].rm_so
                 );
                 command->time = atoi(time_buffer);
@@ -245,16 +245,17 @@ command_t* parse_command(char input[]) {
             }
             // Copy the message from the input (if it exists)
             if (regexes[i].expected_matches > 3) {
+                printf("\n-%s-\n", command->message);
                 strncpy(
                     command->message,
-                    &input[matches[3].rm_so],
-                    matches[3].rm_eo - matches[3].rm_so
+                    input + matches[3].rm_so,
+                    matches[3].rm_eo - matches[3].rm_so + 1
                 );
+                printf("\n-%s-\n", command->message);
             }
 
             return command;
         }
-        return NULL;
     }
 
     return NULL;
