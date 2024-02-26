@@ -245,13 +245,12 @@ command_t* parse_command(char input[]) {
             }
             // Copy the message from the input (if it exists)
             if (regexes[i].expected_matches > 3) {
-                printf("\n-%s-\n", command->message);
                 strncpy(
                     command->message,
                     input + matches[3].rm_so,
-                    matches[3].rm_eo - matches[3].rm_so + 1
+                    matches[3].rm_eo - matches[3].rm_so
                 );
-                printf("\n-%s-\n", command->message);
+                command->message[matches[3].rm_eo - matches[3].rm_so] = 0;
             }
 
             return command;
