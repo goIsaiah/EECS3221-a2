@@ -1,83 +1,7 @@
 #include <pthread.h>
 #include <regex.h>
 #include "errors.h"
-#include <stdarg.h>
-
-/**
- * Prints a debug message to the console.
- *
- * This will only work if the program is compiled with the debug flag.
- * To do that, use the -DDEBUG flag when compiling:
- *
- *   gcc <input_file> -DDEBUG
- *
- * When compiling for production, do not compile with the debug flag,
- * or else the console output will be unnecessarily cluttered.
- */
-void debug_print(const char* message) {
-#ifdef DEBUG
-    printf("%s", message);
-#endif
-}
-
-/**
- * Prints a formatted debug message to the console. The message can be
- * formatted as if you were calling printf.
- *
- * This will only work if the program is compiled with the debug flag.
- * To do that, use the -DDEBUG flag when compiling:
- *
- *   gcc <input_file> -DDEBUG
- *
- * When compiling for production, do not compile with the debug flag,
- * or else the console output will be unnecessarily cluttered.
- */
-void debug_printf(char* format, ...) {
-#ifdef DEBUG
-    va_list args;
-    va_start(args, format);
-    printf("\033[0;21m");
-    vprintf(format, args);
-    printf("\033[0m");
-    va_end(args);
-#endif
-}
-
-/**
- * The six possible types of commands that a user can enter.
- */
-typedef enum command_type {
-    Start_Alarm,
-    Change_Alarm,
-    Cancel_Alarm,
-    Suspend_Alarm,
-    Reactivate_Alarm,
-    View_Alarms
-} command_type;
-
-/**
- * Data structure representing a command entered by a user. Includes
- * the type of the command, the alarm_id (if applicable), the time
- * (if applicable), and the message (if applicable).
- */
-typedef struct command_t {
-    command_type type;
-    int          alarm_id;
-    int          time;
-    char         message[128];
-} command_t;
-
-/**
- * This is the data type that holds information about parsing a
- * command. It contains the type of the command, the regular
- * expression for the command, the number of matches within the
- * command (that must be parsed out).
- */
-typedef struct regex_parser {
-    command_type type;
-    const char *regex_string;
-    int expected_matches;
-} regex_parser;
+#include "debug.h"
 
 /**
  * These are the regexes for the commands that we must look for.
@@ -114,13 +38,6 @@ regex_parser regexes[] = {
         1
     }
 };
-
-typedef struct alarm_t {
-    int alarm_id;
-    int time;
-    char message[128];
-    struct alarm_t *next;
-} alarm_t;
 
 alarm_t header = { 0, 0, "", NULL };
 
@@ -276,7 +193,6 @@ command_t* parse_command(char input[]) {
 }
 
 void *client_thread(void *arg) {
-    printf("client started\n");
     /*
      * Lock the mutex so that this thread can access the alarm
      * list.
@@ -291,18 +207,12 @@ void *client_thread(void *arg) {
          */
         pthread_cond_wait(&alarm_list_cond, &alarm_list_mutex);
 
-        alarm_t *alarm = header.next;
-        printf("[");
-        while (alarm != NULL) {
-            debug_printf(
-                "{id: %d, time: %d, message: %s}\n",
-                alarm->alarm_id,
-                alarm->time,
-                alarm->message
-            );
-            alarm = alarm->next;
-        }
-        printf("]\n");
+        /* alarm_t *alarm = header.next; */
+        /* while (alarm != NULL) { */
+        /*     DEBUG_PRINT_ALARM(alarm); */
+        /*     alarm = alarm->next; */
+        /* } */
+        DEBUG_PRINT_ALARM_LIST(header.next);
 
     }
     pthread_mutex_unlock(&alarm_list_mutex);
@@ -314,6 +224,8 @@ int main(int argc, char *argv[]) {
     command_t *command;
     alarm_t *alarm;
     pthread_t thread;
+
+    DEBUG_PRINT_START_MESSAGE();
 
     pthread_create(&thread, NULL, client_thread, NULL);
 
@@ -330,13 +242,7 @@ int main(int argc, char *argv[]) {
             printf("Bad command\n");
             continue;
         } else {
-            debug_printf(
-                "{type: %d, id: %d, time: %d, message: %s}\n",
-                command->type,
-                command->alarm_id,
-                command->time,
-                command->message
-            );
+            DEBUG_PRINT_COMMAND(command);
 
             /*
              * Allocate space for alarm.
@@ -379,13 +285,7 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            debug_printf(
-                "{type: %d, id: %d, time: %d, message: %s}\n",
-                command->type,
-                command->alarm_id,
-                command->time,
-                command->message
-            );
+            DEBUG_PRINT_COMMAND(command);
 
             /*
              * We are done updating the list, so notify the other
@@ -401,3 +301,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
