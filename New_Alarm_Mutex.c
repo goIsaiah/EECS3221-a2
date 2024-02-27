@@ -1,4 +1,4 @@
-
+#include <pthread.h>
 #include <regex.h>
 #include "errors.h"
 #include <stdarg.h>
@@ -36,7 +36,9 @@ void debug_printf(char* format, ...) {
 #ifdef DEBUG
     va_list args;
     va_start(args, format);
+    printf("\033[0;21m");
     vprintf(format, args);
+    printf("\033[0m");
     va_end(args);
 #endif
 }
@@ -112,6 +114,18 @@ regex_parser regexes[] = {
         1
     }
 };
+
+typedef struct alarm_t {
+    int alarm_id;
+    int time;
+    char message[128];
+    struct alarm_t *next;
+} alarm_t;
+
+alarm_t header = { 0, 0, "", NULL };
+
+pthread_mutex_t alarm_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t alarm_list_cond = PTHREAD_COND_INITIALIZER;
 
 /**
  * This method takes a string and checks if it matches any of the
@@ -261,10 +275,47 @@ command_t* parse_command(char input[]) {
     return NULL;
 }
 
+void *client_thread(void *arg) {
+    printf("client started\n");
+    /*
+     * Lock the mutex so that this thread can access the alarm
+     * list.
+     */
+    pthread_mutex_lock(&alarm_list_mutex);
+
+    while (1) {
+        /*
+         * Wait for condition variable to be broadcast. When we get a
+         * broadcast, this thread will wake up and will have the mutex
+         * locked.
+         */
+        pthread_cond_wait(&alarm_list_cond, &alarm_list_mutex);
+
+        alarm_t *alarm = header.next;
+        printf("[");
+        while (alarm != NULL) {
+            debug_printf(
+                "{id: %d, time: %d, message: %s}\n",
+                alarm->alarm_id,
+                alarm->time,
+                alarm->message
+            );
+            alarm = alarm->next;
+        }
+        printf("]\n");
+
+    }
+    pthread_mutex_unlock(&alarm_list_mutex);
+}
+
 int main(int argc, char *argv[]) {
     char input[128];
     char *return_string;
     command_t *command;
+    alarm_t *alarm;
+    pthread_t thread;
+
+    pthread_create(&thread, NULL, client_thread, NULL);
 
     while (1) {
         printf("Alarm > ");
@@ -279,13 +330,70 @@ int main(int argc, char *argv[]) {
             printf("Bad command\n");
             continue;
         } else {
-            printf(
+            debug_printf(
                 "{type: %d, id: %d, time: %d, message: %s}\n",
                 command->type,
                 command->alarm_id,
                 command->time,
                 command->message
             );
+
+            /*
+             * Allocate space for alarm.
+             */
+            alarm = malloc(sizeof(alarm_t));
+            if (alarm == NULL) {
+                errno_abort("Malloc failed");
+            }
+
+            /*
+             * Fill in data for alarm.
+             */
+            alarm->alarm_id = command->alarm_id;
+            alarm->time = command->time;
+            strcpy(alarm->message, command->message);
+
+            /*
+             * Lock the mutex for the alarm list, so that no other
+             * threads can access the list until we are finished
+             * updating it.
+             */
+            pthread_mutex_lock(&alarm_list_mutex);
+
+            /*
+             * Insert alarm into the list.
+             */
+            if (header.next == NULL) {
+                header.next = alarm;
+            } else {
+                alarm_t *alarm_node = header.next;
+                // Find where to insert it by compating alarm_id. The
+                // list should always be sorted by alarm_id.
+                while (alarm_node != NULL) {
+                    if (alarm->alarm_id > alarm_node->alarm_id) {
+                        alarm->next = alarm_node->next;
+                        alarm_node->next = alarm;
+                        break;
+                    }
+                    alarm_node = alarm_node->next;
+                }
+            }
+
+            debug_printf(
+                "{type: %d, id: %d, time: %d, message: %s}\n",
+                command->type,
+                command->alarm_id,
+                command->time,
+                command->message
+            );
+
+            /*
+             * We are done updating the list, so notify the other
+             * threads by broadcasting, then unlock the mutex so that
+             * the other threads can lock it.
+             */
+            pthread_cond_broadcast(&alarm_list_cond);
+            pthread_mutex_unlock(&alarm_list_mutex);
 
             free(command);
         }
