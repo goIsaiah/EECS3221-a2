@@ -89,11 +89,11 @@ void debug_print_alarm_list(alarm_t *alarm_list_head) {
 
 #else
 
-#define DEBUG_PRINTF(message)
+#define DEBUG_PRINTF(...)
 
 #define DEBUG_PRINT_START_MESSAGE()
 
-#define DRBUG_PRINT(format, ...)
+#define DRBUG_PRINT(message)
 
 #define DEBUG_PRINT_COMMAND(command)
 
