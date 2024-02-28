@@ -192,6 +192,70 @@ command_t* parse_command(char input[]) {
     return NULL;
 }
 
+/**
+ * Inserts an alarm into the list of alarms.
+ *
+ * The alarm list mutex MUST BE LOCKED by the caller of this method.
+ *
+ * If an item in the list already exist with the given alarm's
+ * alarm_id, this method returns NULL (and prints an error message to
+ * the console). Otherwise, the alarm is added to the list and the
+ * alarm is returned.
+ */
+alarm_t* insert_alarm_into_list(alarm_t *alarm) {
+    alarm_t *alarm_node = header.next;
+    alarm_t *next_alarm_node;
+
+    // If the list is initially empty, make the given alarm the head
+    // of the list.
+    if (header.next == NULL) {
+        header.next = alarm;
+        return alarm;
+    }
+
+    alarm_node = &header;
+    next_alarm_node = header.next;
+
+    // Find where to insert it by compating alarm_id. The
+    // list should always be sorted by alarm_id.
+    while (alarm_node != NULL) {
+        if (next_alarm_node == NULL) {
+            if (alarm_node->alarm_id == alarm->alarm_id) {
+                /*
+                 * Invalid because two alarms cannot have the
+                 * same alaarm_id. In this case, unlock the
+                 * mutex and try again.
+                 */
+                printf("Alarm with same ID exists\n");
+                return NULL;
+            } else {
+                // Insert to end of list
+                alarm_node->next = alarm;
+                alarm->next = NULL;
+                return alarm;
+            }
+        }
+
+        if (alarm->alarm_id == alarm_node->alarm_id) {
+            /*
+             * Invalid because two alarms cannot have the
+             * same alaarm_id. In this case, unlock the
+             * mutex and try again.
+             */
+            printf("Alarm with same ID exists\n");
+            return NULL;
+        } else if (alarm->alarm_id > alarm_node->alarm_id
+                   && alarm->alarm_id < next_alarm_node->alarm_id) {
+            alarm->next = next_alarm_node;
+            alarm_node->next = alarm;
+            return alarm;
+        } else {
+            alarm_node = next_alarm_node;
+            next_alarm_node = next_alarm_node->next;
+        }
+    }
+}
+
 void *client_thread(void *arg) {
     /*
      * Lock the mutex so that this thread can access the alarm
@@ -269,20 +333,16 @@ int main(int argc, char *argv[]) {
             /*
              * Insert alarm into the list.
              */
-            if (header.next == NULL) {
-                header.next = alarm;
-            } else {
-                alarm_t *alarm_node = header.next;
-                // Find where to insert it by compating alarm_id. The
-                // list should always be sorted by alarm_id.
-                while (alarm_node != NULL) {
-                    if (alarm->alarm_id > alarm_node->alarm_id) {
-                        alarm->next = alarm_node->next;
-                        alarm_node->next = alarm;
-                        break;
-                    }
-                    alarm_node = alarm_node->next;
-                }
+            if (insert_alarm_into_list(alarm) == NULL) {
+                /*
+                 * If inserting into alarm returns NULL, then the
+                 * alarm was not inserted into this list. In this
+                 * case, unlock the alarm list mutex and free the
+                 * alarm's memory.
+                 */
+                free(alarm);
+                pthread_mutex_unlock(&alarm_list_mutex);
+                continue;
             }
 
             DEBUG_PRINT_COMMAND(command);
