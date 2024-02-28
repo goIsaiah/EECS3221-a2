@@ -258,12 +258,38 @@ alarm_t* insert_alarm_into_list(alarm_t *alarm) {
     }
 }
 
+alarm_t* remove_alarm_from_list(int id)) {
+    alarm_t *alarm_node = header.next;
+
+    while (alarm_node != NULL) {
+        if (alarm->alarm_id == id) {
+            alarm_prev.next = alarm.next;
+        }
+    }
+    return alarm;
+}
+
+int* doesAlarmExist(int id) {
+    alarm_t *alarm_node = header.next;
+    
+    while (alarm_node != NULL) {
+        if (alarm->alarm_id == id) {
+            return 1;
+        }
+        else {
+            alarm_node = alarm_node.next;
+        }
+    }
+    return 0;
+}
+
 typedef struct thread_t {
     int thread_id;
 } thread_t;
 
 typedef struct event_t {
     int type;
+    int alarmId;
     alarm_t *alarm;
 } event_t;
 
@@ -408,6 +434,21 @@ void *client_thread(void *arg) {
             pthread_mutex_unlock(&event_mutex);
         }
 
+        /*
+        * Event of type 3 means that an alarm is being cancelled
+        */
+        if (event->type == 3) {
+            if (alarm1->alarm_id == event->alarmId) {
+                alarm1 = NULL;
+            }
+            else if (alarm2->alarm_id == event->alarmId) {
+                alarm2 = NULL;
+            }
+            free(event);
+            event = NULL;
+            pthread_mutex_unlock(&event_mutex);
+        }
+
         DEBUG_PRINT_ALARM_LIST(header.next);
 
     }
@@ -491,6 +532,36 @@ int main(int argc, char *argv[]) {
                 event->alarm = alarm;
 
                 pthread_mutex_unlock(&event_mutex);
+            }
+
+            else if (command->type == Change_Alarm) {
+
+            }
+
+            else if (command->type == Cancel_Alarm) {
+                int cancelId = command->alarm_id; // Get the ID that will be cancellled
+                /*
+                 * Lock the mutex for the alarm list
+                 */
+                pthread_mutex_lock(&alarm_list_mutex);
+
+                int AlarmExists = doesAlarmExist(cancelId);
+                
+                if (AlarmExists == 0) {
+                    printf("Not a valid ID.\n");
+                }
+                else {
+                    remove_alarm_from_list(cancelId);
+
+                    pthread_mutex_lock(&event_mutex);
+
+                    event = malloc(sizeof(event_t));
+                    event->type = 3;
+                    event->alarm_id = cancelId;
+
+                    pthread_mutex_unlock(&event_mutex);
+                    printf("Cancelled alarm %d\n", cancelId);
+                }
             }
 
             /*
