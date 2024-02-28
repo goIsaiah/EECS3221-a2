@@ -2,6 +2,8 @@
 #include <regex.h>
 #include "errors.h"
 #include "debug.h"
+#include <sys/types.h>
+#include <sys/syscall.h>
 
 /**
  * These are the regexes for the commands that we must look for.
@@ -256,29 +258,163 @@ alarm_t* insert_alarm_into_list(alarm_t *alarm) {
     }
 }
 
+typedef struct thread_t {
+    int thread_id;
+} thread_t;
+
+typedef struct event_t {
+    int type;
+    alarm_t *alarm;
+} event_t;
+
+event_t *event = NULL;
+
+pthread_mutex_t event_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 void *client_thread(void *arg) {
+    int id = ((thread_t*) arg)->thread_id;
+    alarm_t *alarm1 = NULL;
+    alarm_t *alarm2 = NULL;
+    int status;
+    struct timespec t;
+
     /*
-     * Lock the mutex so that this thread can access the alarm
-     * list.
+     * Lock the mutex so that this thread can access the alarm list.
      */
     pthread_mutex_lock(&alarm_list_mutex);
 
     while (1) {
         /*
+         * Set timeout to 5 seconds in the future.
+         */
+        t.tv_sec = time(NULL) + 5;
+        t.tv_nsec = 0;
+
+        /*
          * Wait for condition variable to be broadcast. When we get a
          * broadcast, this thread will wake up and will have the mutex
          * locked.
+         *
+         * Since this is a timed wait, we may also be woken up by the
+         * time expiring. In this case, the status returned will be
+         * ETIMEDOUT.
          */
-        pthread_cond_wait(&alarm_list_cond, &alarm_list_mutex);
+        status = pthread_cond_timedwait(
+            &alarm_list_cond,
+            &alarm_list_mutex,
+            &t
+        );
 
-        /* alarm_t *alarm = header.next; */
-        /* while (alarm != NULL) { */
-        /*     DEBUG_PRINT_ALARM(alarm); */
-        /*     alarm = alarm->next; */
-        /* } */
+        /*
+         * In this case, the 5 seconds timed out, so we must print the
+         * alarm.
+         */
+        if (status == ETIMEDOUT) {
+            /*
+             * If alarm 1 is defined in this thread, print it.
+             */
+            if (alarm1 != NULL) {
+                printf(
+                    "Alarm (%d) Printed by Alarm Display Thread %d at %ld: %d %s\n",
+                    alarm1->alarm_id,
+                    id,
+                    time(NULL),
+                    alarm1->time,
+                    alarm1->message
+                );
+            }
+
+            /*
+             * If alarm 2 is defined in this thread, print it.
+             */
+            if (alarm2 != NULL) {
+                printf(
+                    "Alarm (%d) Printed by Alarm Display Thread %d at %ld: %d %s\n",
+                    alarm2->alarm_id,
+                    id,
+                    time(NULL),
+                    alarm2->time,
+                    alarm2->message
+                );
+            }
+
+            /*
+             * Since the thread was woken up by a timeout, we continue
+             * here so that we don't execute any code below. The code
+             * below is for event handling, and there was no event.
+             */
+            continue;
+        }
+
+        /*
+         * If we reach this part of the code, then the thread was
+         * woken up by an event and not a timeout. In this case, lock
+         * the event mutex so we can try to handle the event.
+         */
+        pthread_mutex_lock(&event_mutex);
+
+        /*
+         * If event is null, then it was either a false alarm, or the
+         * event was already handled by another thread, so we can
+         * ignore it.
+         */
+        if (event == NULL) {
+            pthread_mutex_unlock(&event_mutex);
+            continue;
+        }
+
+        /*
+         * Event type of 1 means a new alarm was created.
+         */
+        if (event->type == 1) {
+            /*
+             * We need to check if this thread's alarms are NULL to
+             * see if we have capacity for the new alarm. If we take
+             * the alarm, then we must free the event and set it to
+             * NULL to show other threads that this event was already
+             * handled.
+             */
+            if (alarm1 == NULL) {
+                /*
+                 * If alarm1 is NULL, then take the alarm.
+                 */
+                alarm1 = event->alarm;
+                DEBUG_PRINTF("Thread took alarm %d\n", alarm1->alarm_id);
+                free(event);
+                event = NULL;
+            } else if (alarm2 == NULL) {
+                /*
+                 * If alarm2 is NULL, we can still take the alarm.
+                 */
+                alarm2 = event->alarm;
+                DEBUG_PRINTF("Thread took alarm %d\n", alarm2->alarm_id);
+                free(event);
+                event = NULL;
+            } else {
+                /*
+                 * If both alarms are not NULL, we cannot take the
+                 * alarm.
+                 */
+                DEBUG_PRINTF(
+                    "Thread at capacity, did not take alarm %d\n",
+                    event->alarm->alarm_id
+                );
+            }
+
+            /*
+             * Unlock event mutex so that the main thread can send
+             * another event.
+             */
+            pthread_mutex_unlock(&event_mutex);
+        }
+
         DEBUG_PRINT_ALARM_LIST(header.next);
 
     }
+
+    /*
+     * Unlock alarm list mutex.
+     */
     pthread_mutex_unlock(&alarm_list_mutex);
 }
 
@@ -288,10 +424,12 @@ int main(int argc, char *argv[]) {
     command_t *command;
     alarm_t *alarm;
     pthread_t thread;
+    int number_of_threads = 1;
 
     DEBUG_PRINT_START_MESSAGE();
 
-    pthread_create(&thread, NULL, client_thread, NULL);
+    thread_t thread1 = { 1 };
+    pthread_create(&thread, NULL, client_thread, &thread1);
 
     while (1) {
         printf("Alarm > ");
@@ -308,44 +446,52 @@ int main(int argc, char *argv[]) {
         } else {
             DEBUG_PRINT_COMMAND(command);
 
-            /*
-             * Allocate space for alarm.
-             */
-            alarm = malloc(sizeof(alarm_t));
-            if (alarm == NULL) {
-                errno_abort("Malloc failed");
-            }
-
-            /*
-             * Fill in data for alarm.
-             */
-            alarm->alarm_id = command->alarm_id;
-            alarm->time = command->time;
-            strcpy(alarm->message, command->message);
-
-            /*
-             * Lock the mutex for the alarm list, so that no other
-             * threads can access the list until we are finished
-             * updating it.
-             */
-            pthread_mutex_lock(&alarm_list_mutex);
-
-            /*
-             * Insert alarm into the list.
-             */
-            if (insert_alarm_into_list(alarm) == NULL) {
+            if (command->type == Start_Alarm) {
                 /*
-                 * If inserting into alarm returns NULL, then the
-                 * alarm was not inserted into this list. In this
-                 * case, unlock the alarm list mutex and free the
-                 * alarm's memory.
+                 * Allocate space for alarm.
                  */
-                free(alarm);
-                pthread_mutex_unlock(&alarm_list_mutex);
-                continue;
-            }
+                alarm = malloc(sizeof(alarm_t));
+                if (alarm == NULL) {
+                    errno_abort("Malloc failed");
+                }
 
-            DEBUG_PRINT_COMMAND(command);
+                /*
+                 * Fill in data for alarm.
+                 */
+                alarm->alarm_id = command->alarm_id;
+                alarm->time = command->time;
+                strcpy(alarm->message, command->message);
+
+                /*
+                 * Lock the mutex for the alarm list, so that no other
+                 * threads can access the list until we are finished
+                 * updating it.
+                 */
+                pthread_mutex_lock(&alarm_list_mutex);
+
+                /*
+                 * Insert alarm into the list.
+                 */
+                if (insert_alarm_into_list(alarm) == NULL) {
+                    /*
+                     * If inserting into alarm returns NULL, then the
+                     * alarm was not inserted into this list. In this
+                     * case, unlock the alarm list mutex and free the
+                     * alarm's memory.
+                     */
+                    free(alarm);
+                    pthread_mutex_unlock(&alarm_list_mutex);
+                    continue;
+                }
+
+                pthread_mutex_lock(&event_mutex);
+
+                event = malloc(sizeof(event_t));
+                event->type = 1;
+                event->alarm = alarm;
+
+                pthread_mutex_unlock(&event_mutex);
+            }
 
             /*
              * We are done updating the list, so notify the other
