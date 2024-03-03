@@ -361,7 +361,7 @@ void *client_thread(void *arg)
             /*
              * If alarm 1 is defined in this thread, print it.
              */
-            if (alarm1 != NULL && strcmp(alarm1->status, "active") == 0)
+            if (alarm1 != NULL && alarm1->status == true)
             {
                 printf(
                     "Alarm (%d) Printed by Alarm Display Thread %d at %ld: %d %s\n",
@@ -375,7 +375,7 @@ void *client_thread(void *arg)
             /*
              * If alarm 2 is defined in this thread, print it.
              */
-            if (alarm2 != NULL && strcmp(alarm2->status, "active") == 0)
+            if (alarm2 != NULL && alarm2->status == true)
             {
                 printf(
                     "Alarm (%d) Printed by Alarm Display Thread %d at %ld: %d %s\n",
@@ -463,7 +463,7 @@ void *client_thread(void *arg)
         }
         else if (event->type == 2) // Assuming type 2 represents suspension
         {
-            if (alarm1 != NULL && alarm1->alarm_id == event->alarmId && strcmp(alarm1->status, "active") == 0)
+            if (alarm1 != NULL && alarm1->alarm_id == event->alarmId && alarm1->status == true)
             {
                 printf(
                     "Alarm (%d) Suspended at %ld: %s\n",
@@ -471,9 +471,9 @@ void *client_thread(void *arg)
                     time(NULL),
                     alarm1->message);
 
-                strcpy(alarm1->status, "suspended");
+                alarm1->status = false;
             }
-            else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId && strcmp(alarm2->status, "active") == 0)
+            else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId && alarm2->status == true)
             {
                 printf(
                     "Alarm (%d) Suspended at %ld: %s\n",
@@ -481,7 +481,7 @@ void *client_thread(void *arg)
                     time(NULL),
                     alarm2->message);
 
-                strcpy(alarm2->status, "suspended");
+                alarm2->status = false;
             }
 
             // Free the event structure
@@ -519,6 +519,7 @@ void *client_thread(void *arg)
             event = NULL;
             pthread_mutex_unlock(&event_mutex);
         }
+        
 
         DEBUG_PRINT_ALARM_LIST(header.next);
     }
@@ -558,9 +559,8 @@ int main(int argc, char *argv[])
         {
             printf("Bad command\n");
             continue;
-        }
-        else
-        {
+        } 
+        else {
             DEBUG_PRINT_COMMAND(command);
 
             if (command->type == Start_Alarm)
@@ -580,7 +580,7 @@ int main(int argc, char *argv[])
                 alarm->alarm_id = command->alarm_id;
                 alarm->time = command->time;
                 strcpy(alarm->message, command->message);
-                strcpy(alarm->status, "active");
+                alarm->status = true;
 
                 /*
                  * Lock the mutex for the alarm list, so that no other
@@ -645,6 +645,26 @@ int main(int argc, char *argv[])
                     pthread_mutex_unlock(&event_mutex);
                     printf("Cancelled alarm %d\n", cancelId);
                 }
+            }
+
+            else if (command->type == Reactivate_Alarm){
+                alarm = header.next;
+                 /*
+                 *Checks if the current alarm is the list is NULL
+                 */
+                while(alarm != NULL){
+                    /*
+                     * Sets the alarms statue to active and prints out the the alarm ID followed by the time the alarm was reactivated  
+                     * and the reactivation message
+                     */
+                    if (alarm->alarm_id == command->alarm_id){
+                        alarm->status = true;
+                        printf("Alarm (<%d>) Reactivated at <%ld>: <%s>\n", alarm->alarm_id, time(NULL) ,command->message);
+                    }
+                    alarm = alarm->next;
+                }
+                
+                    
             }
 
             else if (command->type == Suspend_Alarm)
