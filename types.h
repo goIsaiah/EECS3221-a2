@@ -1,3 +1,4 @@
+#include <stdbool.h>
 /**
  * The six possible types of commands that a user can enter.
  */
@@ -43,5 +44,5 @@ typedef struct alarm_t
     int time;
     char message[128];
     struct alarm_t *next;
-    char status[25];
+    bool state;
 } alarm_t;

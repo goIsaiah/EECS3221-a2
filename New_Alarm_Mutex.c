@@ -558,6 +558,8 @@ int main(int argc, char *argv[])
         {
             printf("Bad command\n");
             continue;
+        } 
+        else {
         }
         else
         {
@@ -646,6 +648,35 @@ int main(int argc, char *argv[])
                     printf("Cancelled alarm %d\n", cancelId);
                 }
             }
+
+            else if (command->type == Reactivate_Alarm){
+                /*
+                 *Checks if the current alarm is the list is NULL
+                 */
+                if ( doesAlarmExist(command-alarm_id) == 0){
+                    printf("Alarm doesn't exist");
+                };
+                /*
+                 *Checks for the alarm with the same ID as the ID in the reactivate command
+                 */
+                else if(command->alarm_id == alarm1->alarm_id){
+                    /*
+                     * Sets the alarms statue to active and prints out the the alarm ID followed by the time the alarm was reactivated  
+                     * and the reactivation message
+                     */
+                    alarm1->state = true;
+                    printf("Alarm (<%d>) Reactivated at <%ld>: <%s>\n", alarm1->alarm_id, time(NULL) ,command->message);
+                }
+                else{
+                    /*
+                     * Sets the alarms statue to active and prints out the the alarm ID followed by the time the alarm was reactivated  
+                     * and the reactivation message
+                     */
+                    alarm2->state = true;
+                    printf("Alarm (<%d>) Reactivated at <%ld>: <%s>\n", alarm2->alarm_id, time(NULL) ,command->message);
+                }
+            }
+           
 
             else if (command->type == Suspend_Alarm)
             {
