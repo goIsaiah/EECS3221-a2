@@ -205,40 +205,13 @@ command_t* parse_command(char input[]) {
  * alarm is returned.
  */
 alarm_t* insert_alarm_into_list(alarm_t *alarm) {
-    alarm_t *alarm_node = header.next;
-    alarm_t *next_alarm_node;
+    alarm_t *alarm_node = &header;
+    alarm_t *next_alarm_node = header.next;
 
-    // If the list is initially empty, make the given alarm the head
-    // of the list.
-    if (header.next == NULL) {
-        header.next = alarm;
-        return alarm;
-    }
-
-    alarm_node = &header;
-    next_alarm_node = header.next;
-
-    // Find where to insert it by compating alarm_id. The
+    // Find where to insert it by comparing alarm_id. The
     // list should always be sorted by alarm_id.
-    while (alarm_node != NULL) {
-        if (next_alarm_node == NULL) {
-            if (alarm_node->alarm_id == alarm->alarm_id) {
-                /*
-                 * Invalid because two alarms cannot have the
-                 * same alaarm_id. In this case, unlock the
-                 * mutex and try again.
-                 */
-                printf("Alarm with same ID exists\n");
-                return NULL;
-            } else {
-                // Insert to end of list
-                alarm_node->next = alarm;
-                alarm->next = NULL;
-                return alarm;
-            }
-        }
-
-        if (alarm->alarm_id == alarm_node->alarm_id) {
+    while (next_alarm_node != NULL) {
+        if (alarm->alarm_id == next_alarm_node->alarm_id) {
             /*
              * Invalid because two alarms cannot have the
              * same alaarm_id. In this case, unlock the
@@ -246,16 +219,52 @@ alarm_t* insert_alarm_into_list(alarm_t *alarm) {
              */
             printf("Alarm with same ID exists\n");
             return NULL;
-        } else if (alarm->alarm_id > alarm_node->alarm_id
-                   && alarm->alarm_id < next_alarm_node->alarm_id) {
-            alarm->next = next_alarm_node;
+        } else if (alarm->alarm_id < next_alarm_node->alarm_id) {
+            // Insert before next_alarm_node
             alarm_node->next = alarm;
+            alarm->next = next_alarm_node;
             return alarm;
         } else {
             alarm_node = next_alarm_node;
             next_alarm_node = next_alarm_node->next;
         }
     }
+
+    // Insert at the end of the list
+    alarm_node->next = alarm;
+    alarm->next = NULL;
+    return alarm;
+    
+}
+
+
+alarm_t* remove_alarm_from_list(int id) {
+    alarm_t *alarm_node = header.next;
+    alarm_t *alarm_prev = &header;
+
+    while (alarm_node != NULL) {
+        if (alarm_node->alarm_id == id) {
+            alarm_prev->next = alarm_node->next;
+            break;
+        }
+        alarm_node = alarm_node->next;
+        alarm_prev = alarm_prev->next;
+    }
+    return alarm_node;
+}
+
+int doesAlarmExist(int id) {
+    alarm_t *alarm_node = header.next;
+    
+    while (alarm_node != NULL) {
+        if (alarm_node->alarm_id == id) {
+            return 1;
+        }
+        else {
+            alarm_node = alarm_node->next;
+        }
+    }
+    return 0;
 }
 
 typedef struct thread_t {
@@ -264,6 +273,7 @@ typedef struct thread_t {
 
 typedef struct event_t {
     int type;
+    int alarmId;
     alarm_t *alarm;
 } event_t;
 
@@ -408,6 +418,34 @@ void *client_thread(void *arg) {
             pthread_mutex_unlock(&event_mutex);
         }
 
+        /*
+        * Event of type 3 means that an alarm is being cancelled
+        */
+        else if (event->type == 3) {
+            if (alarm1 != NULL && alarm1->alarm_id == event->alarmId) {
+                printf(
+                    "Alarm (%d) Canceled at %ld: %s\n",
+                    alarm1->alarm_id,
+                    time(NULL),
+                    alarm1->message
+                );
+                alarm1 = NULL;
+            }
+            else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId) {
+                printf(
+                    "Alarm (%d) Canceled at %ld: %s\n",
+                    alarm2->alarm_id,
+                    time(NULL),
+                    alarm2->message
+                );
+                alarm2 = NULL;
+            }
+
+            free(event);
+            event = NULL;
+            pthread_mutex_unlock(&event_mutex);
+        }
+
         DEBUG_PRINT_ALARM_LIST(header.next);
 
     }
@@ -491,6 +529,36 @@ int main(int argc, char *argv[]) {
                 event->alarm = alarm;
 
                 pthread_mutex_unlock(&event_mutex);
+            }
+
+            else if (command->type == Change_Alarm) {
+
+            }
+
+            else if (command->type == Cancel_Alarm) {
+                int cancelId = command->alarm_id; // Get the ID that will be cancellled
+                /*
+                 * Lock the mutex for the alarm list
+                 */
+                pthread_mutex_lock(&alarm_list_mutex);
+
+                int AlarmExists = doesAlarmExist(cancelId);
+                
+                if (AlarmExists == 0) {
+                    printf("Not a valid ID.\n");
+                }
+                else {
+                    remove_alarm_from_list(cancelId);
+
+                    pthread_mutex_lock(&event_mutex);
+
+                    event = malloc(sizeof(event_t));
+                    event->type = 3;
+                    event->alarmId = cancelId;
+
+                    pthread_mutex_unlock(&event_mutex);
+                    printf("Cancelled alarm %d\n", cancelId);
+                }
             }
 
             /*
