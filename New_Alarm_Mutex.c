@@ -483,6 +483,25 @@ int main(int argc, char *argv[]) {
                     pthread_mutex_unlock(&alarm_list_mutex);
                     continue;
                 }
+                if (command->type == Reactivate_Alarm){
+                    /*
+                     *Checks if the current alarm is the list is NULL
+                     */
+                    while(alarm_t != NULL){
+                        /*
+                         *Checks for the alarm with the same ID as the ID in the reactivate command
+                         */
+                        if(command->alarm_id == alarm_t->alarm_id){
+                            /*
+                             *Sets the alarms statue to active and prints out the the alarm ID followed by the time the alarm was reactivated  
+                             *  and the reactivation message
+                             */
+                            alarm_t->state == true;
+                            printf("Alarm (<%i>) Reactivated at <%i>: <%s>\n", alarm_t->alarm_id,command->time,command->message);
+                        }
+                        alarm_t = alarm_t->next;
+                    }
+                }
 
                 pthread_mutex_lock(&event_mutex);
 
@@ -492,6 +511,7 @@ int main(int argc, char *argv[]) {
 
                 pthread_mutex_unlock(&event_mutex);
             }
+
 
             /*
              * We are done updating the list, so notify the other

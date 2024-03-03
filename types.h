@@ -40,5 +40,6 @@ typedef struct alarm_t {
     int time;
     char message[128];
     struct alarm_t *next;
+    bool state;
 } alarm_t;
 
