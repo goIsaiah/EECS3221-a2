@@ -264,8 +264,7 @@ alarm_t* remove_alarm_from_list(int id) {
 
     while (alarm_node != NULL) {
         if (alarm_node->alarm_id == id) {
-            alarm_prev = alarm_node;
-            alarm_node = alarm_node->next;
+            alarm_prev->next = alarm_node->next;
             break;
         }
         alarm_node = alarm_node->next;
