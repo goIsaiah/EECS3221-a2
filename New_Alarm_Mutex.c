@@ -506,7 +506,8 @@ int main(int argc, char *argv[]) {
         if (command == NULL) {
             printf("Bad command\n");
             continue;
-        } else {
+        } 
+        else {
             DEBUG_PRINT_COMMAND(command);
 
             if (command->type == Start_Alarm) {
@@ -585,26 +586,27 @@ int main(int argc, char *argv[]) {
                     printf("Cancelled alarm %d\n", cancelId);
                 }
             }
-            
+
             else if (command->type == Reactivate_Alarm){
                 /*
                     *Checks if the current alarm is the list is NULL
                     */
-                while(alarm_t != NULL){
+                while(alarm != NULL){
                     /*
                         *Checks for the alarm with the same ID as the ID in the reactivate command
                         */
-                    if(command->alarm_id == alarm_t->alarm_id){
+                    if(command->alarm_id == alarm->alarm_id){
                         /*
                             * Sets the alarms statue to active and prints out the the alarm ID followed by the time the alarm was reactivated  
                             * and the reactivation message
                             */
-                        alarm_t->state == true;
-                        printf("Alarm (<%i>) Reactivated at <%i>: <%s>\n", alarm_t->alarm_id,command->time,command->message);
+                        alarm->state = true;
+                        printf("Alarm (<%d>) Reactivated at <%ld>: <%s>\n", alarm->alarm_id, time(NULL) ,command->message);
                     }
-                    alarm_t = alarm_t->next;
+                    alarm = alarm->next;
                 }
             }
+           
 
             /*
              * We are done updating the list, so notify the other
