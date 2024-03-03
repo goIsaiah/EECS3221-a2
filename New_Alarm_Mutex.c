@@ -422,7 +422,7 @@ void *client_thread(void *arg) {
         * Event of type 3 means that an alarm is being cancelled
         */
         else if (event->type == 3) {
-            if (alarm1->alarm_id == event->alarmId) {
+            if (alarm1 != NULL && alarm1->alarm_id == event->alarmId) {
                 printf(
                     "Alarm (%d) Canceled at %ld: %s\n",
                     alarm1->alarm_id,
@@ -431,7 +431,7 @@ void *client_thread(void *arg) {
                 );
                 alarm1 = NULL;
             }
-            else if (alarm2->alarm_id == event->alarmId) {
+            else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId) {
                 printf(
                     "Alarm (%d) Canceled at %ld: %s\n",
                     alarm2->alarm_id,
