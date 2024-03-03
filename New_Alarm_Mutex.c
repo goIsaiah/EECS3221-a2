@@ -237,33 +237,56 @@ alarm_t* insert_alarm_into_list(alarm_t *alarm) {
     
 }
 
-
+/**
+ * Removes an alarm the list of alarms.
+ *
+ * The alarm list mutex MUST BE LOCKED by the caller of this method.
+ *
+ * The linked list of alarms is searched and when the correct ID is
+ * found, it edits the linked list to remove that alarm.  The edited
+ * list of alarms is then returned.
+ */
 alarm_t* remove_alarm_from_list(int id) {
     alarm_t *alarm_node = header.next;
     alarm_t *alarm_prev = &header;
 
+    // Keeps on searching the list until it finds the correct ID
     while (alarm_node != NULL) {
         if (alarm_node->alarm_id == id) {
             alarm_prev->next = alarm_node->next;
-            break;
+            break; // Exit loop since ID has been found
         }
+        // If the ID is not found, move to the next node
         alarm_node = alarm_node->next;
         alarm_prev = alarm_prev->next;
     }
     return alarm_node;
 }
 
+/**
+ * Checks if an alarm exists in the list of alarms based on a given ID.
+ *
+ * The alarm list mutex MUST BE LOCKED by the caller of this method.
+ *
+ * The linked list of alarms is searched and when the correct ID is
+ * found, it returns the integer 1.  If the ID is not found and the
+ * entire list has been searched, the integer 0 will be returned.
+ */
 int doesAlarmExist(int id) {
     alarm_t *alarm_node = header.next;
     
+    // Loop to iterate through list
     while (alarm_node != NULL) {
+        // ID is found, return 1
         if (alarm_node->alarm_id == id) {
             return 1;
         }
+        // ID not found, move to next node
         else {
             alarm_node = alarm_node->next;
         }
     }
+    // List has been searched and ID does not exist, return 0
     return 0;
 }
 
@@ -429,6 +452,7 @@ void *client_thread(void *arg) {
                     time(NULL),
                     alarm1->message
                 );
+                free(alarm1);
                 alarm1 = NULL;
             }
             else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId) {
@@ -438,6 +462,7 @@ void *client_thread(void *arg) {
                     time(NULL),
                     alarm2->message
                 );
+                free(alarm2);
                 alarm2 = NULL;
             }
 

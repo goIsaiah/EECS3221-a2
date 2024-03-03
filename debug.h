@@ -93,7 +93,7 @@ void debug_print_alarm_list(alarm_t *alarm_list_head) {
 
 #define DEBUG_PRINT_START_MESSAGE()
 
-#define DRBUG_PRINT(message)
+#define DEBUG_PRINT(message)
 
 #define DEBUG_PRINT_COMMAND(command)
 
