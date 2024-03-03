@@ -9,39 +9,26 @@
  * These are the regexes for the commands that we must look for.
  */
 regex_parser regexes[] = {
-    {
-        Start_Alarm,
-        "Start_Alarm\\(([0-9]+)\\):[[:space:]]([0-9]+)[[:space:]](.*)",
-        4
-    },
-    {
-        Change_Alarm,
-        "Change_Alarm\\(([0-9]+)\\):[[:space:]]([0-9]+)[[:space:]](.*)",
-        4
-    },
-    {
-        Cancel_Alarm,
-        "Cancel_Alarm\\(([0-9]+)\\)",
-        2
-    },
-    {
-        Suspend_Alarm,
-        "Suspend_Alarm\\(([0-9]+)\\)",
-        2
-    },
-    {
-        Reactivate_Alarm,
-        "Reactivate_Alarm\\(([0-9]+)\\)",
-        2
-    },
-    {
-        View_Alarms,
-        "View_Alarms",
-        1
-    }
-};
+    {Start_Alarm,
+     "Start_Alarm\\(([0-9]+)\\):[[:space:]]([0-9]+)[[:space:]](.*)",
+     4},
+    {Change_Alarm,
+     "Change_Alarm\\(([0-9]+)\\):[[:space:]]([0-9]+)[[:space:]](.*)",
+     4},
+    {Cancel_Alarm,
+     "Cancel_Alarm\\(([0-9]+)\\)",
+     2},
+    {Suspend_Alarm,
+     "Suspend_Alarm\\(([0-9]+)\\)",
+     2},
+    {Reactivate_Alarm,
+     "Reactivate_Alarm\\(([0-9]+)\\)",
+     2},
+    {View_Alarms,
+     "View_Alarms",
+     1}};
 
-alarm_t header = { 0, 0, "", NULL };
+alarm_t header = {0, 0, "", NULL};
 
 pthread_mutex_t alarm_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t alarm_list_cond = PTHREAD_COND_INITIALIZER;
@@ -51,53 +38,54 @@ pthread_cond_t alarm_list_cond = PTHREAD_COND_INITIALIZER;
  * command formats. If there is no match, NULL is returned. If there
  * is a match, it parses the string into a command and returns it.
  */
-command_t* parse_command(char input[]) {
-    regex_t regex;             // Holds the regex that we are testing
+command_t *parse_command(char input[])
+{
+    regex_t regex; // Holds the regex that we are testing
 
-    int re_status;             // Holds the status of regex tests
+    int re_status; // Holds the status of regex tests
 
-    regmatch_t matches[4];     // Holds the number of matches.
-                               // (No command has more than 3
-                               // matches, which we add 1 to because
-                               // the string itself counts as a
-                               // match).
+    regmatch_t matches[4]; // Holds the number of matches.
+                           // (No command has more than 3
+                           // matches, which we add 1 to because
+                           // the string itself counts as a
+                           // match).
 
-    command_t *command;        // Holds the pointer to the command
-                               // that will be returned.
-                               // (This will be malloced, so it must
-                               // be freed later).
+    command_t *command; // Holds the pointer to the command
+                        // that will be returned.
+                        // (This will be malloced, so it must
+                        // be freed later).
 
     int number_of_regexes = 6; // Six regexes for six commands
 
-    char alarm_id_buffer[64];  // Buffer used to hold alarm_id as a
-                               // string when it is being converted
-                               // to an int.
+    char alarm_id_buffer[64]; // Buffer used to hold alarm_id as a
+                              // string when it is being converted
+                              // to an int.
 
-    char time_buffer[64];      // Buffer used to  hold time as a
-                               // string when it is being converted
-                               // to an int.
+    char time_buffer[64]; // Buffer used to  hold time as a
+                          // string when it is being converted
+                          // to an int.
 
     /*
      * Loop through the regexes and test each one.
      */
-    for (int i = 0; i < number_of_regexes; i++) {
+    for (int i = 0; i < number_of_regexes; i++)
+    {
         /*
          * Compile the regex
          */
         re_status = regcomp(
             &regex,
             regexes[i].regex_string,
-            REG_EXTENDED
-        );
+            REG_EXTENDED);
 
         // Make sure regex compilation succeeded
-        if (re_status != 0) {
+        if (re_status != 0)
+        {
             fprintf(
                 stderr,
                 "Regex %d \"%s\" did not compile\n",
                 i,
-                regexes[i].regex_string
-            );
+                regexes[i].regex_string);
             exit(1);
         }
 
@@ -109,17 +97,19 @@ command_t* parse_command(char input[]) {
             input,
             regexes[i].expected_matches,
             matches,
-            0
-        );
+            0);
 
-        if (re_status == REG_NOMATCH) {
+        if (re_status == REG_NOMATCH)
+        {
             /*
              * If no match, then free the regex and continue on with
              * the loop.
              */
             regfree(&regex);
             continue;
-        } else if (re_status != 0) {
+        }
+        else if (re_status != 0)
+        {
             /*
              * If regex test returned nonzero value, then it was an
              * error. In this case, free the regex and stop the
@@ -130,11 +120,12 @@ command_t* parse_command(char input[]) {
                 "Regex %d \"%s\" did not work with input \"%s\"\n",
                 i,
                 regexes[i].regex_string,
-                input
-            );
+                input);
             regfree(&regex);
             exit(1);
-        } else {
+        }
+        else
+        {
             /*
              * In this case (regex returned 0), we know the input has
              * matched a command and we can now parse it.
@@ -147,7 +138,8 @@ command_t* parse_command(char input[]) {
              * Allocate command (IT MUST BE FREED LATER)
              */
             command = malloc(sizeof(command_t));
-            if (command == NULL) {
+            if (command == NULL)
+            {
                 errno_abort("Malloc failed");
             }
 
@@ -156,34 +148,38 @@ command_t* parse_command(char input[]) {
              */
             command->type = regexes[i].type;
             // Get the alarm_id from the input (if it exists)
-            if (regexes[i].expected_matches > 1) {
+            if (regexes[i].expected_matches > 1)
+            {
                 strncpy(
                     alarm_id_buffer,
                     input + matches[1].rm_so,
-                    matches[1].rm_eo - matches[1].rm_so
-                );
+                    matches[1].rm_eo - matches[1].rm_so);
                 command->alarm_id = atoi(alarm_id_buffer);
-            } else {
+            }
+            else
+            {
                 command->alarm_id = 0;
             }
             // Get the time from the input (if it exists)
-            if (regexes[i].expected_matches > 2) {
+            if (regexes[i].expected_matches > 2)
+            {
                 strncpy(
                     time_buffer,
                     input + matches[2].rm_so,
-                    matches[2].rm_eo - matches[2].rm_so
-                );
+                    matches[2].rm_eo - matches[2].rm_so);
                 command->time = atoi(time_buffer);
-            } else {
+            }
+            else
+            {
                 command->time = 0;
             }
             // Copy the message from the input (if it exists)
-            if (regexes[i].expected_matches > 3) {
+            if (regexes[i].expected_matches > 3)
+            {
                 strncpy(
                     command->message,
                     input + matches[3].rm_so,
-                    matches[3].rm_eo - matches[3].rm_so
-                );
+                    matches[3].rm_eo - matches[3].rm_so);
                 command->message[matches[3].rm_eo - matches[3].rm_so] = 0;
             }
 
@@ -204,14 +200,17 @@ command_t* parse_command(char input[]) {
  * the console). Otherwise, the alarm is added to the list and the
  * alarm is returned.
  */
-alarm_t* insert_alarm_into_list(alarm_t *alarm) {
+alarm_t *insert_alarm_into_list(alarm_t *alarm)
+{
     alarm_t *alarm_node = &header;
     alarm_t *next_alarm_node = header.next;
 
     // Find where to insert it by comparing alarm_id. The
     // list should always be sorted by alarm_id.
-    while (next_alarm_node != NULL) {
-        if (alarm->alarm_id == next_alarm_node->alarm_id) {
+    while (next_alarm_node != NULL)
+    {
+        if (alarm->alarm_id == next_alarm_node->alarm_id)
+        {
             /*
              * Invalid because two alarms cannot have the
              * same alaarm_id. In this case, unlock the
@@ -219,12 +218,17 @@ alarm_t* insert_alarm_into_list(alarm_t *alarm) {
              */
             printf("Alarm with same ID exists\n");
             return NULL;
-        } else if (alarm->alarm_id < next_alarm_node->alarm_id) {
+        }
+        else if (alarm->alarm_id < next_alarm_node->alarm_id)
+        {
             // Insert before next_alarm_node
             alarm_node->next = alarm;
             alarm->next = next_alarm_node;
+
             return alarm;
-        } else {
+        }
+        else
+        {
             alarm_node = next_alarm_node;
             next_alarm_node = next_alarm_node->next;
         }
@@ -234,7 +238,6 @@ alarm_t* insert_alarm_into_list(alarm_t *alarm) {
     alarm_node->next = alarm;
     alarm->next = NULL;
     return alarm;
-    
 }
 
 /**
@@ -246,13 +249,16 @@ alarm_t* insert_alarm_into_list(alarm_t *alarm) {
  * found, it edits the linked list to remove that alarm.  The edited
  * list of alarms is then returned.
  */
-alarm_t* remove_alarm_from_list(int id) {
+alarm_t *remove_alarm_from_list(int id)
+{
     alarm_t *alarm_node = header.next;
     alarm_t *alarm_prev = &header;
 
     // Keeps on searching the list until it finds the correct ID
-    while (alarm_node != NULL) {
-        if (alarm_node->alarm_id == id) {
+    while (alarm_node != NULL)
+    {
+        if (alarm_node->alarm_id == id)
+        {
             alarm_prev->next = alarm_node->next;
             break; // Exit loop since ID has been found
         }
@@ -272,17 +278,21 @@ alarm_t* remove_alarm_from_list(int id) {
  * found, it returns the integer 1.  If the ID is not found and the
  * entire list has been searched, the integer 0 will be returned.
  */
-int doesAlarmExist(int id) {
+int doesAlarmExist(int id)
+{
     alarm_t *alarm_node = header.next;
-    
+
     // Loop to iterate through list
-    while (alarm_node != NULL) {
+    while (alarm_node != NULL)
+    {
         // ID is found, return 1
-        if (alarm_node->alarm_id == id) {
+        if (alarm_node->alarm_id == id)
+        {
             return 1;
         }
         // ID not found, move to next node
-        else {
+        else
+        {
             alarm_node = alarm_node->next;
         }
     }
@@ -290,22 +300,26 @@ int doesAlarmExist(int id) {
     return 0;
 }
 
-typedef struct thread_t {
+typedef struct thread_t
+{
     int thread_id;
 } thread_t;
 
-typedef struct event_t {
+typedef struct event_t
+{
     int type;
     int alarmId;
     alarm_t *alarm;
+
 } event_t;
 
 event_t *event = NULL;
 
 pthread_mutex_t event_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void *client_thread(void *arg) {
-    int id = ((thread_t*) arg)->thread_id;
+void *client_thread(void *arg)
+{
+    int id = ((thread_t *)arg)->thread_id;
     alarm_t *alarm1 = NULL;
     alarm_t *alarm2 = NULL;
     int status;
@@ -316,7 +330,8 @@ void *client_thread(void *arg) {
      */
     pthread_mutex_lock(&alarm_list_mutex);
 
-    while (1) {
+    while (1)
+    {
         /*
          * Set timeout to 5 seconds in the future.
          */
@@ -335,40 +350,40 @@ void *client_thread(void *arg) {
         status = pthread_cond_timedwait(
             &alarm_list_cond,
             &alarm_list_mutex,
-            &t
-        );
+            &t);
 
         /*
          * In this case, the 5 seconds timed out, so we must print the
          * alarm.
          */
-        if (status == ETIMEDOUT) {
+        if (status == ETIMEDOUT)
+        {
             /*
              * If alarm 1 is defined in this thread, print it.
              */
-            if (alarm1 != NULL) {
+            if (alarm1 != NULL && strcmp(alarm1->status, "active") == 0)
+            {
                 printf(
                     "Alarm (%d) Printed by Alarm Display Thread %d at %ld: %d %s\n",
                     alarm1->alarm_id,
                     id,
                     time(NULL),
                     alarm1->time,
-                    alarm1->message
-                );
+                    alarm1->message);
             }
 
             /*
              * If alarm 2 is defined in this thread, print it.
              */
-            if (alarm2 != NULL) {
+            if (alarm2 != NULL && strcmp(alarm2->status, "active") == 0)
+            {
                 printf(
                     "Alarm (%d) Printed by Alarm Display Thread %d at %ld: %d %s\n",
                     alarm2->alarm_id,
                     id,
                     time(NULL),
                     alarm2->time,
-                    alarm2->message
-                );
+                    alarm2->message);
             }
 
             /*
@@ -391,7 +406,8 @@ void *client_thread(void *arg) {
          * event was already handled by another thread, so we can
          * ignore it.
          */
-        if (event == NULL) {
+        if (event == NULL)
+        {
             pthread_mutex_unlock(&event_mutex);
             continue;
         }
@@ -399,7 +415,8 @@ void *client_thread(void *arg) {
         /*
          * Event type of 1 means a new alarm was created.
          */
-        if (event->type == 1) {
+        if (event->type == 1)
+        {
             /*
              * We need to check if this thread's alarms are NULL to
              * see if we have capacity for the new alarm. If we take
@@ -407,7 +424,8 @@ void *client_thread(void *arg) {
              * NULL to show other threads that this event was already
              * handled.
              */
-            if (alarm1 == NULL) {
+            if (alarm1 == NULL)
+            {
                 /*
                  * If alarm1 is NULL, then take the alarm.
                  */
@@ -415,7 +433,9 @@ void *client_thread(void *arg) {
                 DEBUG_PRINTF("Thread took alarm %d\n", alarm1->alarm_id);
                 free(event);
                 event = NULL;
-            } else if (alarm2 == NULL) {
+            }
+            else if (alarm2 == NULL)
+            {
                 /*
                  * If alarm2 is NULL, we can still take the alarm.
                  */
@@ -423,15 +443,16 @@ void *client_thread(void *arg) {
                 DEBUG_PRINTF("Thread took alarm %d\n", alarm2->alarm_id);
                 free(event);
                 event = NULL;
-            } else {
+            }
+            else
+            {
                 /*
                  * If both alarms are not NULL, we cannot take the
                  * alarm.
                  */
                 DEBUG_PRINTF(
                     "Thread at capacity, did not take alarm %d\n",
-                    event->alarm->alarm_id
-                );
+                    event->alarm->alarm_id);
             }
 
             /*
@@ -440,28 +461,56 @@ void *client_thread(void *arg) {
              */
             pthread_mutex_unlock(&event_mutex);
         }
+        else if (event->type == 2) // Assuming type 2 represents suspension
+        {
+            if (alarm1 != NULL && alarm1->alarm_id == event->alarmId && strcmp(alarm1->status, "active") == 0)
+            {
+                printf(
+                    "Alarm (%d) Suspended at %ld: %s\n",
+                    alarm1->alarm_id,
+                    time(NULL),
+                    alarm1->message);
 
+                strcpy(alarm1->status, "suspended");
+            }
+            else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId && strcmp(alarm2->status, "active") == 0)
+            {
+                printf(
+                    "Alarm (%d) Suspended at %ld: %s\n",
+                    alarm2->alarm_id,
+                    time(NULL),
+                    alarm2->message);
+
+                strcpy(alarm2->status, "suspended");
+            }
+
+            // Free the event structure
+            free(event);
+            event = NULL;
+            pthread_mutex_unlock(&event_mutex);
+        }
         /*
-        * Event of type 3 means that an alarm is being cancelled
-        */
-        else if (event->type == 3) {
-            if (alarm1 != NULL && alarm1->alarm_id == event->alarmId) {
+         * Event of type 3 means that an alarm is being cancelled
+         */
+        else if (event->type == 3)
+        {
+            if (alarm1 != NULL && alarm1->alarm_id == event->alarmId)
+            {
                 printf(
                     "Alarm (%d) Canceled at %ld: %s\n",
                     alarm1->alarm_id,
                     time(NULL),
-                    alarm1->message
-                );
+                    alarm1->message);
                 free(alarm1);
                 alarm1 = NULL;
             }
-            else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId) {
+            else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId)
+            {
                 printf(
                     "Alarm (%d) Canceled at %ld: %s\n",
                     alarm2->alarm_id,
                     time(NULL),
-                    alarm2->message
-                );
+                    alarm2->message);
                 free(alarm2);
                 alarm2 = NULL;
             }
@@ -472,7 +521,6 @@ void *client_thread(void *arg) {
         }
 
         DEBUG_PRINT_ALARM_LIST(header.next);
-
     }
 
     /*
@@ -481,7 +529,8 @@ void *client_thread(void *arg) {
     pthread_mutex_unlock(&alarm_list_mutex);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     char input[128];
     char *return_string;
     command_t *command;
@@ -491,30 +540,37 @@ int main(int argc, char *argv[]) {
 
     DEBUG_PRINT_START_MESSAGE();
 
-    thread_t thread1 = { 1 };
+    thread_t thread1 = {1};
     pthread_create(&thread, NULL, client_thread, &thread1);
 
-    while (1) {
+    while (1)
+    {
         printf("Alarm > ");
 
-        if (fgets(input, sizeof(input), stdin) == NULL) {
+        if (fgets(input, sizeof(input), stdin) == NULL)
+        {
             continue;
         }
         // Replace newline with null terminating character
         input[strcspn(input, "\n")] = 0;
         command = parse_command(input);
-        if (command == NULL) {
+        if (command == NULL)
+        {
             printf("Bad command\n");
             continue;
-        } else {
+        }
+        else
+        {
             DEBUG_PRINT_COMMAND(command);
 
-            if (command->type == Start_Alarm) {
+            if (command->type == Start_Alarm)
+            {
                 /*
                  * Allocate space for alarm.
                  */
                 alarm = malloc(sizeof(alarm_t));
-                if (alarm == NULL) {
+                if (alarm == NULL)
+                {
                     errno_abort("Malloc failed");
                 }
 
@@ -524,6 +580,7 @@ int main(int argc, char *argv[]) {
                 alarm->alarm_id = command->alarm_id;
                 alarm->time = command->time;
                 strcpy(alarm->message, command->message);
+                strcpy(alarm->status, "active");
 
                 /*
                  * Lock the mutex for the alarm list, so that no other
@@ -535,7 +592,8 @@ int main(int argc, char *argv[]) {
                 /*
                  * Insert alarm into the list.
                  */
-                if (insert_alarm_into_list(alarm) == NULL) {
+                if (insert_alarm_into_list(alarm) == NULL)
+                {
                     /*
                      * If inserting into alarm returns NULL, then the
                      * alarm was not inserted into this list. In this
@@ -556,11 +614,12 @@ int main(int argc, char *argv[]) {
                 pthread_mutex_unlock(&event_mutex);
             }
 
-            else if (command->type == Change_Alarm) {
-
+            else if (command->type == Change_Alarm)
+            {
             }
 
-            else if (command->type == Cancel_Alarm) {
+            else if (command->type == Cancel_Alarm)
+            {
                 int cancelId = command->alarm_id; // Get the ID that will be cancellled
                 /*
                  * Lock the mutex for the alarm list
@@ -568,11 +627,13 @@ int main(int argc, char *argv[]) {
                 pthread_mutex_lock(&alarm_list_mutex);
 
                 int AlarmExists = doesAlarmExist(cancelId);
-                
-                if (AlarmExists == 0) {
+
+                if (AlarmExists == 0)
+                {
                     printf("Not a valid ID.\n");
                 }
-                else {
+                else
+                {
                     remove_alarm_from_list(cancelId);
 
                     pthread_mutex_lock(&event_mutex);
@@ -583,6 +644,35 @@ int main(int argc, char *argv[]) {
 
                     pthread_mutex_unlock(&event_mutex);
                     printf("Cancelled alarm %d\n", cancelId);
+                }
+            }
+
+            else if (command->type == Suspend_Alarm)
+            {
+                int suspendId = command->alarm_id; // Gets the ID that will be suspended
+                /*
+                 * Lock the mutex for the alarm list
+                 */
+                pthread_mutex_lock(&alarm_list_mutex);
+
+                int AlarmExists = doesAlarmExist(suspendId);
+                if (AlarmExists == 0)
+                {
+                    printf("Not a valid ID.\n");
+                }
+                else
+                {
+
+                    pthread_mutex_lock(&event_mutex);
+
+                    // Allocate memory for the event structure
+                    event = malloc(sizeof(event_t));
+                    event->type = 2;
+                    event->alarmId = suspendId;
+
+                    pthread_mutex_unlock(&event_mutex);
+
+                    printf("Suspended Alarm %d\n", suspendId);
                 }
             }
 
@@ -600,4 +690,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
