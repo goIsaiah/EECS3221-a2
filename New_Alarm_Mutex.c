@@ -193,6 +193,30 @@ command_t* parse_command(char input[]) {
 
     return NULL;
 }
+/** Finds an alarm in the list using a specified ID
+ *  
+ *  Alarm list has to be locked by the caller of this method
+ *
+ *  Goes through the linked list, when specified ID is found, pointer to that alarm will be returned.
+ *
+ *  If the specified ID is not found, return NULL.
+ */
+alarm_t* find_alarm_by_id(int id) {
+  alarm_t *alarm_node = header.next;
+  //Loop through the list
+  while(alarm_node != NULL) {
+    //if ID is found, return pointer to it
+    if(alarm_node-> alarm_id == id){
+      return alarm_node;
+    }
+    //if ID is NOT found, go to next node
+    else{
+      alarm_node = alarm_node->next;
+    }
+  }
+  //If the entire list was searched and specified ID was not found, return NULL.
+  return NULL;
+}
 
 /**
  * Inserts an alarm into the list of alarms.
@@ -557,7 +581,24 @@ int main(int argc, char *argv[]) {
             }
 
             else if (command->type == Change_Alarm) {
-
+          //To make sure no other threads can access the list until finished updating, lock the mutex
+	      pthread_mutex_lock(&alarm_list_mutex);
+	      //Check if the alarm exists, if not return error message and unlock the mutex.
+	      if (!doesAlarmExist(command->alarm_id)) {
+		  printf("Alarm of ID %d does not exist.\n", command->alarm_id);
+		  pthread_mutex_unlock(&alarm_list_mutex);
+		  continue;
+		}
+	    	// Go thru list and find the existing alarm using the ID
+		    alarm_t *existing_alarm = find_alarm_by_id(command->alarm_id);
+		    //Update the existing alarm time and message.
+	      existing_alarm->time = command->time;
+	      strcpy(existing_alarm->message, command->message);
+	      //Broadcast to other threads and unlock mutex so other threads can lock.
+	      pthread_cond_broadcast(&alarm_list_cond);
+	      pthread_mutex_unlock(&alarm_list_mutex);
+	      //Return display message showing alarm has changed.
+	      printf("Alarm changed %d\n", command->alarm_id);
             }
 
             else if (command->type == Cancel_Alarm) {
