@@ -260,7 +260,7 @@ alarm_t* insert_alarm_into_list(alarm_t *alarm) {
 
 alarm_t* remove_alarm_from_list(int id) {
     alarm_t *alarm_node = header.next;
-    alarm_t *alarm_prev = NULL;
+    alarm_t *alarm_prev = &header;
 
     while (alarm_node != NULL) {
         if (alarm_node->alarm_id == id) {
@@ -442,13 +442,26 @@ void *client_thread(void *arg) {
         /*
         * Event of type 3 means that an alarm is being cancelled
         */
-        if (event->type == 3) {
+        else if (event->type == 3) {
             if (alarm1->alarm_id == event->alarmId) {
+                printf(
+                    "Alarm (%d) Canceled at %ld: %s\n",
+                    alarm1->alarm_id,
+                    time(NULL),
+                    alarm1->message
+                );
                 alarm1 = NULL;
             }
             else if (alarm2->alarm_id == event->alarmId) {
+                printf(
+                    "Alarm (%d) Canceled at %ld: %s\n",
+                    alarm2->alarm_id,
+                    time(NULL),
+                    alarm2->message
+                );
                 alarm2 = NULL;
             }
+
             free(event);
             event = NULL;
             pthread_mutex_unlock(&event_mutex);
