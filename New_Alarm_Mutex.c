@@ -258,26 +258,31 @@ alarm_t* insert_alarm_into_list(alarm_t *alarm) {
     }
 }
 
-alarm_t* remove_alarm_from_list(int id)) {
+alarm_t* remove_alarm_from_list(int id) {
     alarm_t *alarm_node = header.next;
+    alarm_t *alarm_prev = NULL;
 
     while (alarm_node != NULL) {
-        if (alarm->alarm_id == id) {
-            alarm_prev.next = alarm.next;
+        if (alarm_node->alarm_id == id) {
+            alarm_prev = alarm_node;
+            alarm_node = alarm_node->next;
+            break;
         }
+        alarm_node = alarm_node->next;
+        alarm_prev = alarm_prev->next;
     }
-    return alarm;
+    return alarm_node;
 }
 
-int* doesAlarmExist(int id) {
+int doesAlarmExist(int id) {
     alarm_t *alarm_node = header.next;
     
     while (alarm_node != NULL) {
-        if (alarm->alarm_id == id) {
+        if (alarm_node->alarm_id == id) {
             return 1;
         }
         else {
-            alarm_node = alarm_node.next;
+            alarm_node = alarm_node->next;
         }
     }
     return 0;
@@ -557,7 +562,7 @@ int main(int argc, char *argv[]) {
 
                     event = malloc(sizeof(event_t));
                     event->type = 3;
-                    event->alarm_id = cancelId;
+                    event->alarmId = cancelId;
 
                     pthread_mutex_unlock(&event_mutex);
                     printf("Cancelled alarm %d\n", cancelId);
