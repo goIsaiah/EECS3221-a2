@@ -46,3 +46,13 @@ typedef struct alarm_t
     struct alarm_t *next;
     bool status;
 } alarm_t;
+
+typedef struct thread_t
+{
+    int thread_id;
+    int alarms;
+    pthread_t thread;
+    struct thread_t *next;
+    alarm_t *alarm;
+
+} thread_t;

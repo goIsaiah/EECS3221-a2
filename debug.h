@@ -84,8 +84,28 @@ void debug_print_alarm_list(alarm_t *alarm_list_head) {
     }
     debug_printf("]\n");
 }
-
 #define DEBUG_PRINT_ALARM_LIST(alarm_list_head) debug_print_alarm_list(alarm_list_head)
+
+void debug_print_thread_list(thread_t thread_list_header){
+    thread_t *thread = &thread_list_header;
+    debug_printf("[");
+    while (thread != NULL){
+        debug_printf(
+            "{id: %d, alarms: %d, next: %p}",
+            thread->thread_id,
+            thread->alarms,
+            thread->next
+        );
+        thread = thread->next;
+        if(thread != NULL){
+            printf(",");
+        }
+    }
+    debug_printf("]\n");
+
+}
+#define DEBUG_PRINT_THREAD_LIST(thread_list_header) debug_print_thread_list(thread_list_header)
+
 
 #else
 
@@ -100,6 +120,8 @@ void debug_print_alarm_list(alarm_t *alarm_list_head) {
 #define DEBUG_PRINT_ALARM(alarm)
 
 #define DEBUG_PRINT_ALARM_LIST(alarm_list_head)
+
+#define DEBUG_PRINT_THREAD_LIST(thread_list_header)
 
 #endif
 
