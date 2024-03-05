@@ -687,7 +687,7 @@ int main(int argc, char *argv[])
                     pthread_mutex_lock(&thread_list_mutex);
                     add_to_thread_list(next_thread);
                     pthread_mutex_unlock(&thread_list_mutex);
-                    pthread_create(&next_thread->thread, NULL, client_thread, &next_thread);
+                    pthread_create(&next_thread->thread, NULL, client_thread, next_thread);
                     DEBUG_PRINT_THREAD_LIST(thread_header);
                     continue;
                 }
