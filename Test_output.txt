@@ -1,0 +1,25 @@
+Messages in blue (this color) are debug messages and white text is the actual output of the program.
+
+Alarm > Start_Alarm(1): 500 snj
+{type: 0, id: 1, time: 500, message: snj}
+Alarm > Thread took alarm 1
+[{id: 1, time: 500, message: snj}]
+Start_AlarmAlarm (1) Printed by Alarm Display Thread 1 at 1709486817: 500 snj
+(2): 500 anjk
+{type: 0, id: 2, time: 500, message: anjk}
+Alarm > Thread took alarm 2
+[{id: 1, time: 500, message: snj}, {id: 2, time: 500, message: anjk}]
+Alarm (1) Printed by Alarm Display Thread 1 at 1709486825: 500 snj
+Alarm (2) Printed by Alarm Display Thread 1 at 1709486825: 500 anjk
+Cancel_AlarmAlarm (1) Printed by Alarm Display Thread 1 at 1709486829: 500 snj
+Alarm (2) Printed by Alarm Display Thread 1 at 1709486829: 500 anjk
+(1)
+{type: 2, id: 1, time: 0, message: }
+Cancelled alarm 1
+Alarm > Alarm (1) Canceled at 1709486832: snj
+[{id: 2, time: 500, message: anjk}]
+Cancel_Alarm(2)Alarm (2) Printed by Alarm Display Thread 1 at 1709486836: 500 anjk
+
+{type: 2, id: 2, time: 0, message: }
+Cancelled alarm 2
+Alarm > Alarm (2) Canceled at 1709486837: anjk
