@@ -567,6 +567,28 @@ void *client_thread(void *arg)
             event = NULL;
             pthread_mutex_unlock(&event_mutex);
         }
+        /*
+         * Event of type 6 means that alarms are being viewed
+        */
+        else if (event->type == 6) {
+            alarm_t *alarm_node = alarm_header.next;
+
+            while(alarm_node != NULL) {
+                printf(
+                    "Alarm(%d): Created at %ld: Assigned at %d %s Status %s\n",
+                    alarm_node->alarm_id,
+                    alarm_node->creation_time,
+                    alarm_node->time,
+                    alarm_node->message,
+                    alarm_node->status);
+                alarm_node = alarm_node->next;
+            }
+            free(alarm_node);
+            alarm_node = NULL;
+            free(event);
+            event = NULL;
+            pthread_mutex_unlock(&event_mutex);
+        }
         
 
         DEBUG_PRINT_ALARM_LIST(alarm_header.next);
@@ -650,6 +672,7 @@ int main(int argc, char *argv[])
                 alarm->time = command->time;
                 strcpy(alarm->message, command->message);
                 alarm->status = true;
+                alarm->creation_time = time(NULL);
 
                 /*
                  * Lock the mutex for the alarm list, so that no other
@@ -816,7 +839,11 @@ int main(int argc, char *argv[])
             }
 
             else if (command->type == View_Alarms) {
+                printf("View Alarms at %ld: \n", time(NULL));
                 pthread_mutex_lock(&alarm_list_mutex);
+                event = malloc(sizeof(event_t));
+                event->type = 6;
+                pthread_mutex_unlock(&event_mutex);
             }
 
             /*
