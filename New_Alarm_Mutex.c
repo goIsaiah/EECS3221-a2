@@ -815,6 +815,10 @@ int main(int argc, char *argv[])
                 }
             }
 
+            else if (command->type == View_Alarms) {
+                pthread_mutex_lock(&alarm_list_mutex);
+            }
+
             /*
              * We are done updating the list, so notify the other
              * threads by broadcasting, then unlock the mutex so that
