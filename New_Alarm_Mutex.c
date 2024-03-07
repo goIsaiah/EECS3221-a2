@@ -30,7 +30,7 @@ regex_parser regexes[] = {
 
 alarm_t alarm_header = {0, 0, "", NULL};
 
-thread_t thread_header = {0,0,NULL,NULL};
+thread_t thread_header = {0,0,0,NULL, 0};
 
 pthread_mutex_t thread_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t alarm_list_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -567,6 +567,30 @@ void *client_thread(void *arg)
             event = NULL;
             pthread_mutex_unlock(&event_mutex);
         }
+        /*
+         * Event of type 6 means that alarms are being viewed
+        */
+        else if (event->type == 6) {
+            if(alarm1 != NULL) {
+                printf(
+                    "Alarm(%d): Created at %ld: Assigned at %d %s Status %d\n",
+                    alarm1->alarm_id,
+                    alarm1->creation_time,
+                    alarm1->time,
+                    alarm1->message,
+                    alarm1->status);
+            }
+            if(alarm2 != NULL) {
+                printf(
+                    "Alarm(%d): Created at %ld: Assigned at %d %s Status %d\n",
+                    alarm2->alarm_id,
+                    alarm2->creation_time,
+                    alarm2->time,
+                    alarm2->message,
+                    alarm2->status);
+            }
+            pthread_mutex_unlock(&event_mutex);
+        }
         
 
         DEBUG_PRINT_ALARM_LIST(alarm_header.next);
@@ -650,6 +674,7 @@ int main(int argc, char *argv[])
                 alarm->time = command->time;
                 strcpy(alarm->message, command->message);
                 alarm->status = true;
+                alarm->creation_time = time(NULL);
 
                 /*
                  * Lock the mutex for the alarm list, so that no other
@@ -813,6 +838,14 @@ int main(int argc, char *argv[])
 
                     printf("Suspended Alarm %d\n", suspendId);
                 }
+            }
+
+            else if (command->type == View_Alarms) {
+                printf("View Alarms at %ld: \n", time(NULL));
+                pthread_mutex_lock(&alarm_list_mutex);
+                event = malloc(sizeof(event_t));
+                event->type = 6;
+                pthread_mutex_unlock(&event_mutex);
             }
 
             /*
