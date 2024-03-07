@@ -30,7 +30,7 @@ regex_parser regexes[] = {
 
 alarm_t alarm_header = {0, 0, "", NULL};
 
-thread_t thread_header = {0,0,NULL,NULL};
+thread_t thread_header = {0,0,0,NULL, 0};
 
 pthread_mutex_t thread_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t alarm_list_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -571,22 +571,24 @@ void *client_thread(void *arg)
          * Event of type 6 means that alarms are being viewed
         */
         else if (event->type == 6) {
-            alarm_t *alarm_node = alarm_header.next;
-
-            while(alarm_node != NULL) {
+            if(alarm1 != NULL) {
                 printf(
-                    "Alarm(%d): Created at %ld: Assigned at %d %s Status %s\n",
-                    alarm_node->alarm_id,
-                    alarm_node->creation_time,
-                    alarm_node->time,
-                    alarm_node->message,
-                    alarm_node->status);
-                alarm_node = alarm_node->next;
+                    "Alarm(%d): Created at %ld: Assigned at %d %s Status %d\n",
+                    alarm1->alarm_id,
+                    alarm1->creation_time,
+                    alarm1->time,
+                    alarm1->message,
+                    alarm1->status);
             }
-            free(alarm_node);
-            alarm_node = NULL;
-            free(event);
-            event = NULL;
+            if(alarm2 != NULL) {
+                printf(
+                    "Alarm(%d): Created at %ld: Assigned at %d %s Status %d\n",
+                    alarm2->alarm_id,
+                    alarm2->creation_time,
+                    alarm2->time,
+                    alarm2->message,
+                    alarm2->status);
+            }
             pthread_mutex_unlock(&event_mutex);
         }
         

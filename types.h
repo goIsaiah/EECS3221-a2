@@ -45,7 +45,7 @@ typedef struct alarm_t
     char message[128];
     struct alarm_t *next;
     bool status;
-    long long creation_time;
+    time_t creation_time;
 } alarm_t;
 
 typedef struct thread_t
