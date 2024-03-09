@@ -353,7 +353,7 @@ void reactivate_alarm_in_list(int alarm_id) {
         if (alarm->alarm_id == alarm_id){
             alarm->status = true;
             printf(
-                "Alarm (<%d>) Reactivated at <%ld>: <%s>\n",
+                "Alarm (%d) Reactivated at %ld: %s\n",
                 alarm->alarm_id,
                 time(NULL),
                 alarm->message
@@ -620,7 +620,8 @@ void *client_thread(void *arg)
             if (alarm1 != NULL && alarm1->alarm_id == event->alarmId)
             {
                 printf(
-                    "Alarm (%d) Canceled at %ld: %s\n",
+                    "Display Alarm Thread (%d) Removed Canceled Alarm(%d) at %ld: %s\n",
+                    thread->thread_id,
                     alarm1->alarm_id,
                     time(NULL),
                     alarm1->message);
@@ -643,7 +644,8 @@ void *client_thread(void *arg)
             else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId)
             {
                 printf(
-                    "Alarm (%d) Canceled at %ld: %s\n",
+                    "Display Alarm Thread (%d) Removed Canceled Alarm(%d) at %ld: %s\n",
+                    thread->thread_id,
                     alarm2->alarm_id,
                     time(NULL),
                     alarm2->message);
@@ -901,7 +903,7 @@ int main(int argc, char *argv[])
                 strcpy(existing_alarm -> message, command -> message);
 
                 //Return display message showing alarm has changed.
-                printf("Alarm changed %d\n", command -> alarm_id);
+                printf("Alarm (%d) Changed at %ld: %s\n", command->alarm_id, time(NULL), command->message);
             }
             else if (command->type == Cancel_Alarm)
             {
@@ -929,8 +931,6 @@ int main(int argc, char *argv[])
                     event->type = Cancel_Alarm;
                     event->alarmId = cancelId;
                     pthread_mutex_unlock(&event_mutex);
-
-                    printf("Cancelled alarm %d\n", cancelId);
                 }
             }
             else if (command->type == Reactivate_Alarm)
@@ -973,8 +973,6 @@ int main(int argc, char *argv[])
                     event->type = Suspend_Alarm;
                     event->alarmId = suspendId;
                     pthread_mutex_unlock(&event_mutex);
-
-                    printf("Suspended Alarm %d\n", suspendId);
                 }
             }
             else if (command->type == View_Alarms) {
