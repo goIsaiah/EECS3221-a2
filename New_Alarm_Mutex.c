@@ -26,15 +26,49 @@ regex_parser regexes[] = {
      2},
     {View_Alarms,
      "View_Alarms",
-     1}};
+     1}
+};
 
+/**
+ * Header of the list of alarms.
+ */
 alarm_t alarm_header = {0, 0, "", NULL};
 
+/**
+ * Mutex for the alarm list. Any thread reading or modifying the alarm list must
+ * have this mutex locked.
+ */
+pthread_mutex_t alarm_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * Condition variable for the alarm list. This allows threads to wait for
+ * updates to the alarm list.
+ */
+pthread_cond_t alarm_list_cond = PTHREAD_COND_INITIALIZER;
+
+/**
+ * Header of the list of threads.
+ */
 thread_t thread_header = {0,0,0,NULL, 0};
 
+/**
+ * Mutex for the thread list. Any thread reading or modifying the thread list
+ * must have this mutex locked.
+ */
 pthread_mutex_t thread_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t alarm_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t alarm_list_cond = PTHREAD_COND_INITIALIZER;
+
+/**
+ * The current event being handled. If the event is NULL, then there is no
+ * event being handled. Note that there can only be one event being handled at
+ * any given time.
+ */
+event_t *event = NULL;
+
+/**
+ * Mutex for the event. Any thread reading or modifying the event must have
+ * this mutex locked.
+ */
+pthread_mutex_t event_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * This method takes a string and checks if it matches any of the
@@ -47,26 +81,21 @@ command_t *parse_command(char input[])
 
     int re_status; // Holds the status of regex tests
 
-    regmatch_t matches[4]; // Holds the number of matches.
-                           // (No command has more than 3
-                           // matches, which we add 1 to because
-                           // the string itself counts as a
-                           // match).
+    regmatch_t matches[4]; // Holds the number of matches. (No command has more
+                           // than 3 matches, which we add 1 to because the
+                           // string itself counts as a match).
 
-    command_t *command; // Holds the pointer to the command
-                        // that will be returned.
-                        // (This will be malloced, so it must
-                        // be freed later).
+    command_t *command; // Holds the pointer to the command that will be
+                        // returned. (This will be malloced, so it must be
+                        // freed later).
 
     int number_of_regexes = 6; // Six regexes for six commands
 
-    char alarm_id_buffer[64]; // Buffer used to hold alarm_id as a
-                              // string when it is being converted
-                              // to an int.
+    char alarm_id_buffer[64]; // Buffer used to hold alarm_id as a string when
+                              // it is being converted to an int.
 
-    char time_buffer[64]; // Buffer used to  hold time as a
-                          // string when it is being converted
-                          // to an int.
+    char time_buffer[64]; // Buffer used to  hold time as a string when it is
+                          // being converted to an int.
 
     /*
      * Loop through the regexes and test each one.
@@ -192,14 +221,17 @@ command_t *parse_command(char input[])
 
     return NULL;
 }
-/** Finds an alarm in the list using a specified ID
-*
-*  Alarm list has to be locked by the caller of this method
-*
-*  Goes through the linked list, when specified ID is found, pointer to that alarm will be returned.
-*
-*  If the specified ID is not found, return NULL.
-*/
+
+/**
+ * Finds an alarm in the list using a specified ID
+ *
+ * Alarm list has to be locked by the caller of this method
+ *
+ * Goes through the linked list, when specified ID is found, pointer
+ * to that alarm will be returned.
+ *
+ * If the specified ID is not found, return NULL.
+ */
 alarm_t* find_alarm_by_id(int id) 
 {
     alarm_t *alarm_node = alarm_header.next;
@@ -218,9 +250,11 @@ alarm_t* find_alarm_by_id(int id)
             alarm_node = alarm_node->next;
         }
     }
-        //If the entire list was searched and specified ID was not found, return NULL.
+    //If the entire list was searched and specified ID was not
+    //found, return NULL.
     return NULL;
 }
+
 /**
  * Inserts an alarm into the list of alarms.
  *
@@ -301,6 +335,35 @@ alarm_t *remove_alarm_from_list(int id)
 }
 
 /**
+ * Reactivates an alarm in the alarm list by traversing the list until it finds
+ * the alarm with the specified id and setting its status to true (active).
+ */
+void reactivate_alarm_in_list(int alarm_id) {
+    alarm_t *alarm = alarm_header.next;
+
+    /*
+     *Checks if the current alarm is the list is NULL
+     */
+    while(alarm != NULL){
+        /*
+         * Sets the alarms status to active and prints out the the alarm ID
+         * followed by the time the alarm was reactivated and the reactivation
+         * message.
+         */
+        if (alarm->alarm_id == alarm_id){
+            alarm->status = true;
+            printf(
+                "Alarm (<%d>) Reactivated at <%ld>: <%s>\n",
+                alarm->alarm_id,
+                time(NULL),
+                alarm->message
+            );
+        }
+        alarm = alarm->next;
+    }
+}
+
+/**
  * Checks if an alarm exists in the list of alarms based on a given ID.
  *
  * The alarm list mutex MUST BE LOCKED by the caller of this method.
@@ -331,20 +394,9 @@ int doesAlarmExist(int id)
     return 0;
 }
 
-
-
-typedef struct event_t
-{
-    int type;
-    int alarmId;
-    alarm_t *alarm;
-
-} event_t;
-
-event_t *event = NULL;
-
-pthread_mutex_t event_mutex = PTHREAD_MUTEX_INITIALIZER;
-
+/**
+ * DISPLAY THREAD
+ */
 void *client_thread(void *arg)
 {
     thread_t *thread = ((thread_t *)arg);
@@ -352,13 +404,31 @@ void *client_thread(void *arg)
     alarm_t *alarm2 = NULL;
     int status;
     struct timespec t;
+
+    DEBUG_PRINTF("Creating thread %d\n", thread->thread_id);
+
+    /*
+     * If the alarm passed to this thread is not NULL, then we should
+     * take it as our first alarm.
+     */
     if(thread->alarm != NULL){
+        DEBUG_PRINTF(
+            "Thread %d taking alarm %d via thread parameter\n",
+            thread->thread_id,
+            thread->alarm->alarm_id
+        );
+        // Take alarm as alarm1
         alarm1 = thread->alarm;
+        // Update the number of available alarms for this thread in
+        // the thread list. Note that we need the mutex to do this
+        // because multiple threads can access the list of threads.
         pthread_mutex_lock(&thread_list_mutex);
         thread->alarms++;
         pthread_mutex_unlock(&thread_list_mutex);
-        DEBUG_PRINTF("gellos");
+    } else {
+        DEBUG_PRINTF("Thread %d was not given an alarm\n");
     }
+
     /*
      * Lock the mutex so that this thread can access the alarm list.
      */
@@ -384,7 +454,8 @@ void *client_thread(void *arg)
         status = pthread_cond_timedwait(
             &alarm_list_cond,
             &alarm_list_mutex,
-            &t);
+            &t
+        );
 
         /*
          * In this case, the 5 seconds timed out, so we must print the
@@ -398,7 +469,8 @@ void *client_thread(void *arg)
             if (alarm1 != NULL && alarm1->status == true)
             {
                 printf(
-                    "Alarm (%d) Printed by Alarm Display Thread %d at %ld: %d %s\n",
+                    "Alarm (%d) Printed by Alarm Display Thread %d at"
+                    "%ld: %d %s\n",
                     alarm1->alarm_id,
                     thread->thread_id,
                     time(NULL),
@@ -412,7 +484,8 @@ void *client_thread(void *arg)
             if (alarm2 != NULL && alarm2->status == true)
             {
                 printf(
-                    "Alarm (%d) Printed by Alarm Display Thread %d at %ld: %d %s\n",
+                    "Alarm (%d) Printed by Alarm Display Thread %d at"
+                    "%ld: %d %s\n",
                     alarm2->alarm_id,
                     thread->thread_id,
                     time(NULL),
@@ -449,7 +522,7 @@ void *client_thread(void *arg)
         /*
          * Event type of 1 means a new alarm was created.
          */
-        if (event->type == 1)
+        if (event->type == Start_Alarm)
         {
             /*
              * We need to check if this thread's alarms are NULL to
@@ -469,7 +542,6 @@ void *client_thread(void *arg)
                 pthread_mutex_lock(&thread_list_mutex);
                 thread->alarms++;
                 pthread_mutex_unlock(&thread_list_mutex);
-
                 event = NULL;
             }
             else if (alarm2 == NULL)
@@ -502,9 +574,11 @@ void *client_thread(void *arg)
              */
             pthread_mutex_unlock(&event_mutex);
         }
-        else if (event->type == 2) // Assuming type 2 represents suspension
+        else if (event->type == Suspend_Alarm)
         {
-            if (alarm1 != NULL && alarm1->alarm_id == event->alarmId && alarm1->status == true)
+            if (alarm1 != NULL
+                && alarm1->alarm_id == event->alarmId
+                && alarm1->status == true)
             {
                 printf(
                     "Alarm (%d) Suspended at %ld: %s\n",
@@ -514,7 +588,9 @@ void *client_thread(void *arg)
 
                 alarm1->status = false;
             }
-            else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId && alarm2->status == true)
+            else if (alarm2 != NULL
+                     && alarm2->alarm_id == event->alarmId
+                     && alarm2->status == true)
             {
                 printf(
                     "Alarm (%d) Suspended at %ld: %s\n",
@@ -523,17 +599,23 @@ void *client_thread(void *arg)
                     alarm2->message);
 
                 alarm2->status = false;
+            } else {
+                DEBUG_PRINTF(
+                    "Suspend_Alarm command for alarm %d was not handled by"
+                    "thread &d\n",
+                    event->alarmId,
+                    thread->thread_id
+                );
             }
 
-            // Free the event structure
+            /*
+             * Free the event structure because it has been handled.
+             */
             free(event);
             event = NULL;
             pthread_mutex_unlock(&event_mutex);
         }
-        /*
-         * Event of type 3 means that an alarm is being cancelled
-         */
-        else if (event->type == 3)
+        else if (event->type == Cancel_Alarm)
         {
             if (alarm1 != NULL && alarm1->alarm_id == event->alarmId)
             {
@@ -542,11 +624,21 @@ void *client_thread(void *arg)
                     alarm1->alarm_id,
                     time(NULL),
                     alarm1->message);
+
+                // Free alarm
                 free(alarm1);
                 alarm1 = NULL;
+
+                // Update thread list to show that this thread has one less
+                // alarm.
                 pthread_mutex_lock(&thread_list_mutex);
                 thread->alarms--;
                 pthread_mutex_unlock(&thread_list_mutex);
+
+                // Free event since it is now handled.
+                free(event);
+                event = NULL;
+                pthread_mutex_unlock(&event_mutex);
             }
             else if (alarm2 != NULL && alarm2->alarm_id == event->alarmId)
             {
@@ -555,25 +647,35 @@ void *client_thread(void *arg)
                     alarm2->alarm_id,
                     time(NULL),
                     alarm2->message);
+
+                // Free alarm.
                 free(alarm2);
                 alarm2 = NULL;
+
+                // Update thread list to show that this thread has one less
+                // alarm.
                 pthread_mutex_lock(&thread_list_mutex);
                 thread->alarms--;
                 pthread_mutex_unlock(&thread_list_mutex);
-               
-            }
 
-            free(event);
-            event = NULL;
-            pthread_mutex_unlock(&event_mutex);
+                // Free event since it is now handled.
+                free(event);
+                event = NULL;
+                pthread_mutex_unlock(&event_mutex);
+            } else {
+                DEBUG_PRINTF(
+                    "Cancel_Alarm event for alarm %d not handled by"
+                    "thread %d\n",
+                    event->alarmId,
+                    thread->thread_id
+                );
+            }
         }
-        /*
-         * Event of type 6 means that alarms are being viewed
-        */
-        else if (event->type == 6) {
+        else if (event->type == View_Alarms) {
             if(alarm1 != NULL) {
                 printf(
-                    "Alarm(%d): Created at %ld: Assigned at %d %s Status %d\n",
+                    "Alarm(%d): Created at %ld: Assigned at %d %s "
+                    "Status %d\n",
                     alarm1->alarm_id,
                     alarm1->creation_time,
                     alarm1->time,
@@ -582,7 +684,8 @@ void *client_thread(void *arg)
             }
             if(alarm2 != NULL) {
                 printf(
-                    "Alarm(%d): Created at %ld: Assigned at %d %s Status %d\n",
+                    "Alarm(%d): Created at %ld: Assigned at %d %s "
+                    "Status %d\n",
                     alarm2->alarm_id,
                     alarm2->creation_time,
                     alarm2->time,
@@ -602,8 +705,12 @@ void *client_thread(void *arg)
     pthread_mutex_unlock(&alarm_list_mutex);
 }
 
+/**
+ * Adds a thread to the thread list.
+ */
 void add_to_thread_list(thread_t *thread){
     thread_t *current_thread = &thread_header;
+
     while (current_thread != NULL){
         if(current_thread->next == NULL){
             current_thread->next = thread;
@@ -611,20 +718,29 @@ void add_to_thread_list(thread_t *thread){
         }
         current_thread = current_thread->next;
     }
-
 }
 
+/**
+ * Checks if there are any threads in the thread list that have space for an
+ * alarm. Returns true if all the threads are full (no space left), and false if
+ * there is at least one thread with space for an alarm.
+ */
 bool thread_full_check(){
     thread_t *current_thread = thread_header.next;
+
     while(current_thread != NULL){
         if(current_thread->alarms != 2){
             return false;
         }
-        current_thread =current_thread->next;
+        current_thread = current_thread->next;
     }
+
     return true;
 }
 
+/**
+ * MAIN THREAD
+ */
 int main(int argc, char *argv[])
 {
     char input[128];
@@ -648,11 +764,18 @@ int main(int argc, char *argv[])
         // Replace newline with null terminating character
         input[strcspn(input, "\n")] = 0;
         command = parse_command(input);
+
+        /*
+         * If command is NULL, then the command was invalid.
+         */
         if (command == NULL)
         {
             printf("Bad command\n");
             continue;
-        } 
+        }
+        /*
+         * Command was  valid, so we can handle it.
+         */
         else {
             DEBUG_PRINT_COMMAND(command);
 
@@ -700,75 +823,90 @@ int main(int argc, char *argv[])
                 }
 
                 DEBUG_PRINT_THREAD_LIST(thread_header);
+
+                /*
+                 * If all the threads are full we need to make a new thread for
+                 * the new alarm.
+                 */
                 if (thread_full_check() == true){
-                    DEBUG_PRINTF("gellos");
+                    // Allocate space for a new thread.
                     next_thread = malloc(sizeof(thread_t));
+                    // Fill in data for the thread
                     next_thread->thread_id = number_of_threads;
                     number_of_threads ++;
                     next_thread->alarms = 0;
                     next_thread->next = NULL;
-                    pthread_mutex_unlock(&alarm_list_mutex);
-                    next_thread->alarm =  alarm;   
+                    next_thread->alarm =  alarm;
+
+                    // Add the thread to the thread list. We need to lock the
+                    // thread list mutex first.
                     pthread_mutex_lock(&thread_list_mutex);
                     add_to_thread_list(next_thread);
                     pthread_mutex_unlock(&thread_list_mutex);
-                    pthread_create(&next_thread->thread, NULL, client_thread, next_thread);
+
+                    // Create the new thread.
+                    pthread_create(
+                        &next_thread->thread,
+                        NULL,
+                        client_thread,
+                        next_thread
+                    );
+
                     DEBUG_PRINT_THREAD_LIST(thread_header);
+
+                    /*
+                     * Unlock the mutex now since we don't want to emit an event
+                     * here.
+                     */
+                    pthread_mutex_unlock(&alarm_list_mutex);
                     continue;
                 }
-                
                 else{
+                    /*
+                     * In this case, there is at least one thread with space for
+                     * the new alarm. So we just need to send the event without
+                     * creating a new thread.
+                     */
                     pthread_mutex_lock(&event_mutex);
                     event = malloc(sizeof(event_t));
-                    event->type = 1;
+                    event->type = Start_Alarm;
                     event->alarm = alarm;
                     pthread_mutex_unlock(&event_mutex);
 
                 }            
             }
-
             else if (command->type == Change_Alarm)
             {
-                //To make sure no other threads can access the list until finished updating, lock the mutex
+                // To make sure no other threads can access the list until
+                // finished updating, lock the mutex
                 pthread_mutex_lock( & alarm_list_mutex);
-                
-                //Check if the alarm exists, if not return error message and unlock the mutex.
-                
+
+                // Check if the alarm exists, if not return error message and
+                // unlock the mutex.
                 if (!doesAlarmExist(command -> alarm_id))
-            {
-                printf("Alarm of ID %d does not exist.\n", command -> alarm_id);
-                
-                pthread_mutex_unlock( & alarm_list_mutex);
-                
-                continue;
-            }
+                {
+                    printf(
+                        "Alarm of ID %d does not exist.\n",
+                        command->alarm_id
+                    );
+                    pthread_mutex_unlock( & alarm_list_mutex);
+                    continue;
+                }
+
                 // Go through list and find the existing alarm using the ID
+                alarm_t *existing_alarm = find_alarm_by_id(command -> alarm_id);
                 
-                alarm_t * existing_alarm = find_alarm_by_id(command -> alarm_id);
-                
-                //Update the existing alarm time and message.
-                
+                //Update the existing alarm time and message.                
                 existing_alarm -> time = command -> time;
-                
                 strcpy(existing_alarm -> message, command -> message);
-                
-                //Broadcast to other threads and unlock mutex so other threads can lock.
-                
-                pthread_cond_broadcast( & alarm_list_cond);
-                pthread_mutex_unlock( & alarm_list_mutex);
-                
+
                 //Return display message showing alarm has changed.
-                
                 printf("Alarm changed %d\n", command -> alarm_id);
             }
-
             else if (command->type == Cancel_Alarm)
             {
-                int cancelId = command->alarm_id; // Get the ID that will be cancellled
-                /*
-                 * Lock the mutex for the alarm list
-                 */
-                pthread_mutex_lock(&alarm_list_mutex);
+                // Get the ID that will be cancellled
+                int cancelId = command->alarm_id;
 
                 int AlarmExists = doesAlarmExist(cancelId);
 
@@ -778,46 +916,46 @@ int main(int argc, char *argv[])
                 }
                 else
                 {
+                    /*
+                     * Remove alarm from list
+                     */
                     remove_alarm_from_list(cancelId);
 
+                    /*
+                     * Send cancel alarm event to thread.
+                     */
                     pthread_mutex_lock(&event_mutex);
-
                     event = malloc(sizeof(event_t));
-                    event->type = 3;
+                    event->type = Cancel_Alarm;
                     event->alarmId = cancelId;
-
                     pthread_mutex_unlock(&event_mutex);
+
                     printf("Cancelled alarm %d\n", cancelId);
                 }
             }
-
-            else if (command->type == Reactivate_Alarm){
-                alarm = alarm_header.next;
-                 /*
-                 *Checks if the current alarm is the list is NULL
-                 */
-                while(alarm != NULL){
-                    /*
-                     * Sets the alarms statue to active and prints out the the alarm ID followed by the time the alarm was reactivated  
-                     * and the reactivation message
-                     */
-                    if (alarm->alarm_id == command->alarm_id){
-                        alarm->status = true;
-                        printf("Alarm (<%d>) Reactivated at <%ld>: <%s>\n", alarm->alarm_id, time(NULL) ,command->message);
-                    }
-                    alarm = alarm->next;
+            else if (command->type == Reactivate_Alarm)
+            {
+                int AlarmExists = doesAlarmExist(command->alarm_id);
+                if (AlarmExists == 0)
+                {
+                    printf("Not a valid ID.\n");
                 }
-                
-                    
+                else
+                {
+                    /*
+                     * Reactivate the alarm in the list. Note that we don't use
+                     * an event because it is simpler to just reactivate it
+                     * here. Since the thread owning this alarm shares the
+                     * reference to this alarm in the list, it will "notice"
+                     * the change in status of the alarm.
+                     */
+                    reactivate_alarm_in_list(command->alarm_id);
+                }
             }
-
             else if (command->type == Suspend_Alarm)
             {
-                int suspendId = command->alarm_id; // Gets the ID that will be suspended
-                /*
-                 * Lock the mutex for the alarm list
-                 */
-                pthread_mutex_lock(&alarm_list_mutex);
+                // Gets the ID that will be suspended
+                int suspendId = command->alarm_id;
 
                 int AlarmExists = doesAlarmExist(suspendId);
                 if (AlarmExists == 0)
@@ -826,25 +964,24 @@ int main(int argc, char *argv[])
                 }
                 else
                 {
-
+                    /*
+                     * Send event to display threads.
+                     */
                     pthread_mutex_lock(&event_mutex);
-
                     // Allocate memory for the event structure
                     event = malloc(sizeof(event_t));
-                    event->type = 2;
+                    event->type = Suspend_Alarm;
                     event->alarmId = suspendId;
-
                     pthread_mutex_unlock(&event_mutex);
 
                     printf("Suspended Alarm %d\n", suspendId);
                 }
             }
-
             else if (command->type == View_Alarms) {
                 printf("View Alarms at %ld: \n", time(NULL));
                 pthread_mutex_lock(&alarm_list_mutex);
                 event = malloc(sizeof(event_t));
-                event->type = 6;
+                event->type = View_Alarms;
                 pthread_mutex_unlock(&event_mutex);
             }
 
@@ -862,3 +999,4 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+

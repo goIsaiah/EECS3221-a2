@@ -125,5 +125,3 @@ void debug_print_thread_list(thread_t thread_list_header){
 
 #endif
 
-
-
