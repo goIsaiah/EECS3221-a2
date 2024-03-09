@@ -32,7 +32,7 @@ regex_parser regexes[] = {
 /**
  * Header of the list of alarms.
  */
-alarm_t alarm_header = {0, 0, "", NULL};
+alarm_t alarm_header = {0, 0, "", NULL, false, 0, 0};
 
 /**
  * Mutex for the alarm list. Any thread reading or modifying the alarm list must
@@ -403,6 +403,7 @@ void *client_thread(void *arg)
     alarm_t *alarm1 = NULL;
     alarm_t *alarm2 = NULL;
     int status;
+    time_t now;
     struct timespec t;
 
     DEBUG_PRINTF("Creating thread %d\n", thread->thread_id);
@@ -426,7 +427,7 @@ void *client_thread(void *arg)
         thread->alarms++;
         pthread_mutex_unlock(&thread_list_mutex);
     } else {
-        DEBUG_PRINTF("Thread %d was not given an alarm\n");
+        DEBUG_PRINTF("Thread %d was not given an alarm\n", thread->thread_id);
     }
 
     /*
@@ -436,10 +437,38 @@ void *client_thread(void *arg)
 
     while (1)
     {
-        /*
-         * Set timeout to 5 seconds in the future.
-         */
-        t.tv_sec = time(NULL) + 5;
+        now = time(NULL);
+
+        if (alarm1 != NULL && alarm1->expiration_time - now < 5) {
+            if (alarm2 == NULL) {
+                // Alarm 1 expires first
+                t.tv_sec = alarm1->expiration_time;
+            } else if (alarm1->expiration_time < alarm2->expiration_time) {
+                // Alarm 1 expires first
+                t.tv_sec = alarm1->expiration_time;
+            } else {
+                // Alarm 2 expires first
+                t.tv_sec = alarm2->expiration_time;
+            }
+        }
+        else if (alarm2 != NULL && alarm2->expiration_time - now < 5) {
+            if (alarm1 == NULL) {
+                // Alarm 2 expires first
+                t.tv_sec = alarm2->expiration_time;
+            } else if (alarm2->expiration_time < alarm1->expiration_time) {
+                // Alarm 2 expires first
+                t.tv_sec = alarm2->expiration_time;
+            } else {
+                // Alarm 1 expires first
+                t.tv_sec = alarm1->expiration_time;
+            }
+        } else {
+            /*
+             * Set timeout to 5 seconds in the future because none of the alarms
+             * are expiring soon.
+             */
+            t.tv_sec = now + 5;
+        }
         t.tv_nsec = 0;
 
         /*
@@ -463,11 +492,34 @@ void *client_thread(void *arg)
          */
         if (status == ETIMEDOUT)
         {
-            /*
-             * If alarm 1 is defined in this thread, print it.
-             */
-            if (alarm1 != NULL && alarm1->status == true)
+            if (alarm1 != NULL && alarm1->expiration_time > time(NULL)) {
+                printf(
+                    "Display Alarm Thread %d Removed Expired Alarm(%d) at "
+                    "%ld: %d %s\n",
+                    thread->thread_id,
+                    alarm1->alarm_id,
+                    time(NULL),
+                    alarm1->time,
+                    alarm1->message
+                );
+
+                /*
+                 * If alarm1 has expired, remove it from the list, free the
+                 * alarm, remove it from this thread, and update the thread list
+                 * to show that this thread has another space left.
+                 */
+                remove_alarm_from_list(alarm1->alarm_id);
+                free(alarm1);
+                alarm1 = NULL;
+                pthread_mutex_lock(&thread_list_mutex);
+                thread->alarms--;
+                pthread_mutex_unlock(&thread_list_mutex);
+            }
+            else if (alarm1 != NULL && alarm1->status == true)
             {
+                /*
+                 * If alarm 1 is defined in this thread, print it.
+                 */
                 printf(
                     "Alarm (%d) Printed by Alarm Display Thread %d at"
                     "%ld: %d %s\n",
@@ -478,11 +530,34 @@ void *client_thread(void *arg)
                     alarm1->message);
             }
 
-            /*
-             * If alarm 2 is defined in this thread, print it.
-             */
-            if (alarm2 != NULL && alarm2->status == true)
+            if (alarm2 != NULL && alarm2->expiration_time > time(NULL)) {
+                printf(
+                    "Display Alarm Thread %d Removed Expired Alarm(%d) at "
+                    "%ld: %d %s\n",
+                    thread->thread_id,
+                    alarm2->alarm_id,
+                    time(NULL),
+                    alarm2->time,
+                    alarm2->message
+                );
+
+                /*
+                 * If alarm1 has expired, remove it from the list, free the
+                 * alarm, remove it from this thread, and update the thread list
+                 * to show that this thread has another space left.
+                 */
+                remove_alarm_from_list(alarm2->alarm_id);
+                free(alarm2);
+                alarm2 = NULL;
+                pthread_mutex_lock(&thread_list_mutex);
+                thread->alarms--;
+                pthread_mutex_unlock(&thread_list_mutex);
+            }
+            else if (alarm2 != NULL && alarm2->status == true)
             {
+                /*
+                 * If alarm 2 is defined in this thread, print it.
+                 */
                 printf(
                     "Alarm (%d) Printed by Alarm Display Thread %d at"
                     "%ld: %d %s\n",
@@ -674,6 +749,8 @@ void *client_thread(void *arg)
             }
         }
         else if (event->type == View_Alarms) {
+            printf("Display Thread %d Assigned:\n", thread->thread_id);
+
             if(alarm1 != NULL) {
                 printf(
                     "Alarm(%d): Created at %ld: Assigned at %d %s "
@@ -696,7 +773,6 @@ void *client_thread(void *arg)
             }
             pthread_mutex_unlock(&event_mutex);
         }
-        
 
         DEBUG_PRINT_ALARM_LIST(alarm_header.next);
     }
@@ -781,6 +857,13 @@ int main(int argc, char *argv[])
         else {
             DEBUG_PRINT_COMMAND(command);
 
+            /*
+             * Lock the mutex for the alarm list, so that no other
+             * threads can access the list until we are finished
+             * updating it.
+             */
+            pthread_mutex_lock(&alarm_list_mutex);
+
             if (command->type == Start_Alarm)
             {
                 /*
@@ -800,13 +883,7 @@ int main(int argc, char *argv[])
                 strcpy(alarm->message, command->message);
                 alarm->status = true;
                 alarm->creation_time = time(NULL);
-
-                /*
-                 * Lock the mutex for the alarm list, so that no other
-                 * threads can access the list until we are finished
-                 * updating it.
-                 */
-                pthread_mutex_lock(&alarm_list_mutex);
+                alarm->expiration_time = time(NULL) + alarm->time;
 
                 /*
                  * Insert alarm into the list.
@@ -824,7 +901,18 @@ int main(int argc, char *argv[])
                     continue;
                 }
 
+                printf(
+                    "Alarm %d Inserted Into Alarm List at %ld: %d %s\n",
+                    alarm->alarm_id,
+                    time(NULL),
+                    alarm->time,
+                    alarm->message
+                );
+
+                DEBUG_PRINTF("threads: ");
                 DEBUG_PRINT_THREAD_LIST(thread_header);
+                DEBUG_PRINTF("alarms: ");
+                DEBUG_PRINT_ALARM_LIST(alarm_header.next);
 
                 /*
                  * If all the threads are full we need to make a new thread for
@@ -856,6 +944,14 @@ int main(int argc, char *argv[])
 
                     DEBUG_PRINT_THREAD_LIST(thread_header);
 
+                    printf(
+                        "New Display Alarm Thread %d Created at %ld: %d %s\n",
+                        next_thread->thread_id,
+                        time(NULL),
+                        alarm->time,
+                        alarm->message
+                    );
+                    
                     /*
                      * Unlock the mutex now since we don't want to emit an event
                      * here.
@@ -879,12 +975,8 @@ int main(int argc, char *argv[])
             }
             else if (command->type == Change_Alarm)
             {
-                // To make sure no other threads can access the list until
-                // finished updating, lock the mutex
-                pthread_mutex_lock( & alarm_list_mutex);
-
-                // Check if the alarm exists, if not return error message and
-                // unlock the mutex.
+                // Check if the alarm exists, if not return error
+                // message and unlock the mutex.
                 if (!doesAlarmExist(command -> alarm_id))
                 {
                     printf(
@@ -900,10 +992,17 @@ int main(int argc, char *argv[])
                 
                 //Update the existing alarm time and message.                
                 existing_alarm -> time = command -> time;
+                existing_alarm->expiration_time = existing_alarm->creation_time
+                    + command->time;
                 strcpy(existing_alarm -> message, command -> message);
 
                 //Return display message showing alarm has changed.
-                printf("Alarm (%d) Changed at %ld: %s\n", command->alarm_id, time(NULL), command->message);
+                printf(
+                    "Alarm (%d) Changed at %ld: %s\n",
+                    command->alarm_id,
+                    time(NULL),
+                    command->message
+                );
             }
             else if (command->type == Cancel_Alarm)
             {
@@ -977,11 +1076,13 @@ int main(int argc, char *argv[])
             }
             else if (command->type == View_Alarms) {
                 printf("View Alarms at %ld: \n", time(NULL));
-                pthread_mutex_lock(&alarm_list_mutex);
+                pthread_mutex_lock(&event_mutex);
                 event = malloc(sizeof(event_t));
                 event->type = View_Alarms;
                 pthread_mutex_unlock(&event_mutex);
             }
+
+            DEBUG_PRINT_ALARM_LIST(alarm_header.next);
 
             /*
              * We are done updating the list, so notify the other
