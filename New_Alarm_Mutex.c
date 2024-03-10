@@ -439,7 +439,7 @@ void *client_thread(void *arg)
     {
         now = time(NULL);
 
-        if (alarm1 != NULL && alarm1->expiration_time - now < 5) {
+        if (alarm1 != NULL && alarm1->expiration_time - now > 5) {
             if (alarm2 == NULL) {
                 // Alarm 1 expires first
                 t.tv_sec = alarm1->expiration_time;
@@ -451,7 +451,7 @@ void *client_thread(void *arg)
                 t.tv_sec = alarm2->expiration_time;
             }
         }
-        else if (alarm2 != NULL && alarm2->expiration_time - now < 5) {
+        else if (alarm2 != NULL && alarm2->expiration_time - now > 5) {
             if (alarm1 == NULL) {
                 // Alarm 2 expires first
                 t.tv_sec = alarm2->expiration_time;
