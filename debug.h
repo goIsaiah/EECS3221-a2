@@ -58,10 +58,14 @@ void debug_print_command(command_t *command) {
 
 void debug_print_alarm(alarm_t *alarm) {
     debug_printf(
-        "{id: %d, time: %d, message: %s}\n",
+        "{id: %d, time: %d, message: %s, status: %d, "
+        "creation_time: %ld, expiration_time: %ld}\n",
         alarm->alarm_id,
         alarm->time,
-        alarm->message
+        alarm->message,
+        alarm->status,
+        alarm->creation_time,
+        alarm->expiration_time
     );
 }
 
@@ -72,10 +76,14 @@ void debug_print_alarm_list(alarm_t *alarm_list_head) {
     debug_printf("[");
     while (alarm != NULL) {
         debug_printf(
-            "{id: %d, time: %d, message: %s}",
+            "{id: %d, time: %d, message: %s, status: %d, "
+            "creation_time: %ld, expiration_time: %ld}",
             alarm->alarm_id,
             alarm->time,
-            alarm->message
+            alarm->message,
+            alarm->status,
+            alarm->creation_time,
+            alarm->expiration_time
         );
         alarm = alarm->next;
         if (alarm != NULL) {
