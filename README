@@ -4,7 +4,8 @@
 2. To compile the program "New_Alarm_Mutex.c", simply type "make" in your
    terminal.
 
-3. Type "a.out" to run the executable code.
+3. Type "a.out" to run the executable code.  On some computers, you may need
+   to type "./a.out" instead in order for it to work.
 
 4. At the prompt "Alarm > ", you can use any of the commands outlined in the
    assignment document.  Any command that is not properly used or does not
