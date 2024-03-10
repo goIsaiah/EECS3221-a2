@@ -1,22 +1,54 @@
-1. First copy the files "alarm_mutex.c", and "errors.h" into your
-   own directory.
+1. First, copy the files "New_Alarm_Mutex.c", "debug.h", and "errors.h", 
+   "Makefile", and "types.h" into your own directory.
 
-2. To compile the program "alarm_mutex.c", use the following command:
-
-      cc alarm_mutex.c -D_POSIX_PTHREAD_SEMANTICS -lpthread
+2. To compile the program "New_Alarm_Mutex.c", simply type "make" in your
+   terminal.
 
 3. Type "a.out" to run the executable code.
 
-4. At the prompt "ALARM>", type in the number of seconds at which
-   the alarm should expire, followed by the text of the message.
-   For example:
+4. At the prompt "Alarm > ", you can use any of the commands outlined in the
+   assignment document.  Any command that is not properly used or does not
+   exist will output "Bad command".  To exit the program, press Ctrl + C.
 
-   ALARM> 2 Good Morning!
+List of commands:
+"Start_Alarm" has the following format:
+   Alarm > Start_Alarm(Alarm_ID): Time Message
+For example:
+   Alarm > Start_Alarm(1): 50 test1
+will creare an alarm with the ID 1, it will contain the message "test1", and
+the alarm will expire after 50 seconds.
 
-  (To exit from the program, type Ctrl-d.)
+"Change_Alarm" has the following format:
+   Alarm > Change_Alarm(Alarm_ID): Time Message
+For example:
+   Alarm > Change_Alarm(1): 60 test2
+will change the time and message of alarm with ID 1 to 60 seconds and "test2"
+respectiveley.
 
-5.. Read pages 52-58 of the book "Programming with POSIX Threads"
-   by David R. Butenhof for a detailed explanation of how the
-   program "alarm_mutex.c" works.
-   (The book "Programming with POSIX Threads" has been put on
-   reserve in Steacie Library.)
+"Cancel_Alarm" has the following format:
+   Alarm > Cancel_Alarm(Alarm_ID)
+For example:
+   Alarm > Cancel_Alarm(1)
+will remove the alarm with ID 1 from the list and thread.  In order for this
+command to function properly, the alarm with the given ID needs to already
+exist.
+
+"Suspend_Alarm" has the following format:
+   Alarm > Suspend_Alarm(Alarm_ID)
+For example:
+   Alarm > Suspend_Alarm(1)
+will pause an alarm with ID 1, so it won't expire after its given time.  In
+order for this command to function properly, the alarm with the given ID
+needs to already exist.
+
+"Reactivate_Alarm" has the following format:
+   Alarm > Reactivate_Alarm(Alarm_ID)
+For example:
+   Alarm > Reactivate_Alarm(1)
+will resume the alarm with ID 1.  In order for this command to function properly,
+the alarm with the given ID will need to have been previously suspended using the
+"Suspend_Alarm" request.
+
+"View_Alarms" has the following format:
+   Alarm > View_Alarms
+It will print all of the alarms that are currently in the list/thread.
