@@ -310,9 +310,9 @@ alarm_t *insert_alarm_into_list(alarm_t *alarm)
  *
  * The alarm list mutex MUST BE LOCKED by the caller of this method.
  *
- * The linked list of alarms is searched and when the correct ID is
- * found, it edits the linked list to remove that alarm.  The edited
- * list of alarms is then returned.
+ * The linked list of alarms is searched and when the correct ID is found, it
+ * edits the linked list to remove that alarm. The node that was removes is
+ * then returned.
  */
 alarm_t *remove_alarm_from_list(int id)
 {
@@ -394,17 +394,112 @@ int doesAlarmExist(int id)
     return 0;
 }
 
+
+/**
+ * Adds a thread to the thread list.
+ *
+ * The caller of this function must have the thread list mutex locked when
+ * calling this function.
+ */
+void add_to_thread_list(thread_t *thread){
+    thread_t *current_thread = &thread_header;
+
+    while (current_thread != NULL){
+        if(current_thread->next == NULL){
+            current_thread->next = thread;
+            break;
+        }
+        current_thread = current_thread->next;
+    }
+}
+
+/**
+ * Removes a thread from the thread list.
+ *
+ * The caller of this function must have the thread list mutex locked when
+ * calling this function.
+ *
+ * The linked list of threads is searched and when the correct ID is found, it
+ * edits the linked list to remove that alarm. The thread that was removed is
+ * then returned.
+ */
+thread_t* remove_from_thread_list(thread_t *thread){
+    thread_t *thread_node = thread_header.next;
+    thread_t *thread_prev = &thread_header;
+
+    // Keeps on searching the list until it finds the correct thread in the list
+    while (thread_prev != NULL){
+        if (thread_node == thread) {
+            thread_prev->next = thread_node->next; // Remove from list.
+            break;                                 // Exit loop.
+        }
+        // If the ID is not found, move to the next node
+        thread_node = thread_node->next;
+        thread_prev = thread_prev->next;
+    }
+
+    return thread_node;
+}
+
+/**
+ * Checks if there are any threads in the thread list that have space for an
+ * alarm. Returns true if all the threads are full (no space left), and false if
+ * there is at least one thread with space for an alarm.
+ */
+bool thread_full_check(){
+    thread_t *current_thread = thread_header.next;
+
+    while(current_thread != NULL){
+        if(current_thread->alarms != 2){
+            return false;
+        }
+        current_thread = current_thread->next;
+    }
+
+    return true;
+}
+
 /**
  * DISPLAY THREAD
+ * * * * * * * * *
+ *
+ * This is the function that will be used for display threads. It will loop
+ * every 5 seconds, waiting on a condition variable. When the wait times out, it
+ * prints the alarms that it holds, unless either of its alarm has expired, in
+ * which case it will delete the alarm.
+ *
+ * The main thread communicates to the display threads through events and a
+ * condition variable. When the main thread needs an event to be handled by a
+ * display thread, it creates an event, stored in a global variable, and
+ * broadcasts a condition variable.
+ *
+ * If a display thread can handle an event, it will perform actions to handle it
+ * and delete the event once it is finished. Other display threads will not
+ * handle a deleted event, ensuring the event is only handled once. If a thread
+ * cannot handle an event, it will do nothing.
+ *
+ * Once a display thread has no alarms left (either because they expired or were
+ * cancelled) it will remove and free its entry from the thread list and return
+ * from this function (which will allow the thread to be recycled by the
+ * operating system).
  */
 void *client_thread(void *arg)
 {
-    thread_t *thread = ((thread_t *)arg);
-    alarm_t *alarm1 = NULL;
-    alarm_t *alarm2 = NULL;
-    int status;
-    time_t now;
-    struct timespec t;
+    thread_t *thread = ((thread_t *)arg); // The thread parameter passed to this
+                                          // thread.
+
+    alarm_t *alarm1 = NULL;               // The first slot for an alarm.
+
+    alarm_t *alarm2 = NULL;               // The second slot for an alarm.
+
+    int status;                           // Vaariable to hold the status
+                                          // returned by timed condition
+                                          // variable waits.
+
+    time_t now;                           // Variable to hold the current time.
+
+    struct timespec t;                    // Variable for setting timeout for
+                                          // timed condition variable waits.
 
     DEBUG_PRINTF("Creating thread %d\n", thread->thread_id);
 
@@ -418,8 +513,10 @@ void *client_thread(void *arg)
             thread->thread_id,
             thread->alarm->alarm_id
         );
+
         // Take alarm as alarm1
         alarm1 = thread->alarm;
+
         // Update the number of available alarms for this thread in
         // the thread list. Note that we need the mutex to do this
         // because multiple threads can access the list of threads.
@@ -437,8 +534,40 @@ void *client_thread(void *arg)
 
     while (1)
     {
+        /*
+         * If both alarms are NULL, then we can remove this thread.
+         *
+         * Note that the thread is given an alarm in the parameter when it is
+         * created, so it should not exit immediately after creation.
+         */
+        if (alarm1 == NULL && alarm2 == NULL) {
+            printf(
+                "Display Alarm Thread %d Exiting at %ld\n",
+                thread->thread_id,
+                time(NULL)
+            );
+
+            /*
+             * Lock thread list mutex, remove thread from list, free thread
+             * (because it was malloced by the main thread), unlock thread list
+             * mutex, and break so that we exit the main loop and this thread
+             * can be destroyed.
+             */
+            pthread_mutex_lock(&thread_list_mutex);
+            remove_from_thread_list(thread);
+            free(thread);
+            pthread_mutex_unlock(&thread_list_mutex);
+            break;
+        }
+
+        /*
+         * Get current time (in seconds from UNIX epoch).
+         */
         now = time(NULL);
 
+        /*
+         * Calculate timeout.
+         */
         if (alarm1 != NULL && alarm1->expiration_time - now < 5) {
             if (alarm2 == NULL) {
                 // Alarm 1 expires first
@@ -450,8 +579,7 @@ void *client_thread(void *arg)
                 // Alarm 2 expires first
                 t.tv_sec = alarm2->expiration_time;
             }
-        }
-        else if (alarm2 != NULL && alarm2->expiration_time - now < 5) {
+        } else if (alarm2 != NULL && alarm2->expiration_time - now < 5) {
             if (alarm1 == NULL) {
                 // Alarm 2 expires first
                 t.tv_sec = alarm2->expiration_time;
@@ -463,10 +591,8 @@ void *client_thread(void *arg)
                 t.tv_sec = alarm1->expiration_time;
             }
         } else {
-            /*
-             * Set timeout to 5 seconds in the future because none of the alarms
-             * are expiring soon.
-             */
+            // Set timeout to 5 seconds in the future because none of the
+            // alarmsare expiring soon.
             t.tv_sec = now + 5;
         }
         /*
@@ -789,50 +915,35 @@ void *client_thread(void *arg)
 }
 
 /**
- * Adds a thread to the thread list.
- */
-void add_to_thread_list(thread_t *thread){
-    thread_t *current_thread = &thread_header;
-
-    while (current_thread != NULL){
-        if(current_thread->next == NULL){
-            current_thread->next = thread;
-            break;
-        }
-        current_thread = current_thread->next;
-    }
-}
-
-/**
- * Checks if there are any threads in the thread list that have space for an
- * alarm. Returns true if all the threads are full (no space left), and false if
- * there is at least one thread with space for an alarm.
- */
-bool thread_full_check(){
-    thread_t *current_thread = thread_header.next;
-
-    while(current_thread != NULL){
-        if(current_thread->alarms != 2){
-            return false;
-        }
-        current_thread = current_thread->next;
-    }
-
-    return true;
-}
-
-/**
  * MAIN THREAD
+ * * * * * * *
+ *
+ * This is the function for the main thread (and the entry point to the
+ * program). It reads commands from user input, parses the command, and performs
+ * actions relating to the command.
+ *
+ * Commands will add, modify, and delete alarms. Each alarm is malloced by this
+ * thread. Since each display thread can only hold a maximum of two alarms, this
+ * thread is responsible for creating new display threads.
+ *
+ * When handling commands, the main thread will manipulate the alarm list and
+ * create events and broadcast them to the display threads to be handled.
+ * Display threads will wait on a condition variable, allowing the main thread
+ * to wake up the display threads by broadcasting the condition variable.
  */
 int main(int argc, char *argv[])
 {
-    char input[128];
-    char *return_string;
-    command_t *command;
-    alarm_t *alarm;
-    thread_t *next_thread;
-    pthread_t thread;
-    int number_of_threads = 0;
+    char input[128];           // Buffer for user input.
+
+    command_t *command;        // Pointer for the currently entered command.
+
+    alarm_t *alarm;            // Pointer for newly created alarms.
+
+    thread_t *next_thread;     // Pointer for newly created threads.
+
+    int thread_id_counter = 0; // Counter for thread IDs. This will be
+                               // incremented every time a thread is created so
+                               // that each thread has a unique ID.
 
     DEBUG_PRINT_START_MESSAGE();
 
@@ -926,12 +1037,17 @@ int main(int argc, char *argv[])
                 if (thread_full_check() == true){
                     // Allocate space for a new thread.
                     next_thread = malloc(sizeof(thread_t));
+                    if (next_thread == NULL) {
+                        errno_abort("Malloc failed");
+                    }
                     // Fill in data for the thread
-                    next_thread->thread_id = number_of_threads;
-                    number_of_threads ++;
+                    next_thread->thread_id = thread_id_counter;
                     next_thread->alarms = 0;
                     next_thread->next = NULL;
                     next_thread->alarm =  alarm;
+
+                    // Increment thread ID counter
+                    thread_id_counter++;
 
                     // Add the thread to the thread list. We need to lock the
                     // thread list mutex first.
@@ -972,6 +1088,9 @@ int main(int argc, char *argv[])
                      */
                     pthread_mutex_lock(&event_mutex);
                     event = malloc(sizeof(event_t));
+                    if (event == NULL) {
+                        errno_abort("Malloc failed");
+                    }
                     event->type = Start_Alarm;
                     event->alarm = alarm;
                     pthread_mutex_unlock(&event_mutex);
@@ -1032,6 +1151,9 @@ int main(int argc, char *argv[])
                      */
                     pthread_mutex_lock(&event_mutex);
                     event = malloc(sizeof(event_t));
+                    if (event == NULL) {
+                        errno_abort("Malloc failed");
+                    }
                     event->type = Cancel_Alarm;
                     event->alarmId = cancelId;
                     pthread_mutex_unlock(&event_mutex);
@@ -1074,6 +1196,9 @@ int main(int argc, char *argv[])
                     pthread_mutex_lock(&event_mutex);
                     // Allocate memory for the event structure
                     event = malloc(sizeof(event_t));
+                    if (event == NULL) {
+                        errno_abort("Malloc failed");
+                    }
                     event->type = Suspend_Alarm;
                     event->alarmId = suspendId;
                     pthread_mutex_unlock(&event_mutex);
@@ -1083,6 +1208,9 @@ int main(int argc, char *argv[])
                 printf("View Alarms at %ld: \n", time(NULL));
                 pthread_mutex_lock(&event_mutex);
                 event = malloc(sizeof(event_t));
+                if (event == NULL) {
+                    errno_abort("Malloc failed");
+                }
                 event->type = View_Alarms;
                 pthread_mutex_unlock(&event_mutex);
             }
