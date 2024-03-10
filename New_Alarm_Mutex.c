@@ -439,7 +439,7 @@ void *client_thread(void *arg)
     {
         now = time(NULL);
 
-        if (alarm1 != NULL && alarm1->expiration_time - now > 5) {
+        if (alarm1 != NULL && alarm1->expiration_time - now < 5) {
             if (alarm2 == NULL) {
                 // Alarm 1 expires first
                 t.tv_sec = alarm1->expiration_time;
@@ -451,7 +451,7 @@ void *client_thread(void *arg)
                 t.tv_sec = alarm2->expiration_time;
             }
         }
-        else if (alarm2 != NULL && alarm2->expiration_time - now > 5) {
+        else if (alarm2 != NULL && alarm2->expiration_time - now < 5) {
             if (alarm1 == NULL) {
                 // Alarm 2 expires first
                 t.tv_sec = alarm2->expiration_time;
@@ -469,7 +469,12 @@ void *client_thread(void *arg)
              */
             t.tv_sec = now + 5;
         }
-        t.tv_nsec = 0;
+        /*
+         * Add 10 milliseconds (10,000,000 nanoseconds) to the timeout to make
+         * sure the expiry is reached. If we don't do this, we get a bug where
+         * the alarm prints out many times in quick succession before expiring.
+         */
+        t.tv_nsec = 10000000;
 
         /*
          * Wait for condition variable to be broadcast. When we get a
@@ -492,7 +497,7 @@ void *client_thread(void *arg)
          */
         if (status == ETIMEDOUT)
         {
-            if (alarm1 != NULL && alarm1->expiration_time > time(NULL)) {
+            if (alarm1 != NULL && alarm1->expiration_time <= time(NULL)) {
                 printf(
                     "Display Alarm Thread %d Removed Expired Alarm(%d) at "
                     "%ld: %d %s\n",
@@ -530,7 +535,7 @@ void *client_thread(void *arg)
                     alarm1->message);
             }
 
-            if (alarm2 != NULL && alarm2->expiration_time > time(NULL)) {
+            if (alarm2 != NULL && alarm2->expiration_time <= time(NULL)) {
                 printf(
                     "Display Alarm Thread %d Removed Expired Alarm(%d) at "
                     "%ld: %d %s\n",
@@ -542,7 +547,7 @@ void *client_thread(void *arg)
                 );
 
                 /*
-                 * If alarm1 has expired, remove it from the list, free the
+                 * If alarm2 has expired, remove it from the list, free the
                  * alarm, remove it from this thread, and update the thread list
                  * to show that this thread has another space left.
                  */
