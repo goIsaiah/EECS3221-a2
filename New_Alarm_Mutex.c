@@ -819,6 +819,12 @@ void *client_thread(void *arg)
 
                 alarm1->status = false;
                 alarm1->time_left = alarm1->expiration_time - time(NULL);
+
+                /*
+                 * Free the event structure because it has been handled.
+                 */
+                free(event);
+                event = NULL;
             }
             else if (alarm2 != NULL
                      && alarm2->alarm_id == event->alarmId
@@ -832,6 +838,12 @@ void *client_thread(void *arg)
 
                 alarm2->status = false;
                 alarm2->time_left = alarm2->expiration_time - time(NULL);
+
+                /*
+                 * Free the event structure because it has been handled.
+                 */
+                free(event);
+                event = NULL;
             } else {
                 DEBUG_PRINTF(
                     "Suspend_Alarm command for alarm %d was not handled by"
@@ -842,10 +854,8 @@ void *client_thread(void *arg)
             }
 
             /*
-             * Free the event structure because it has been handled.
+             * Unlock event mutex
              */
-            free(event);
-            event = NULL;
             pthread_mutex_unlock(&event_mutex);
         }
         else if (event->type == Cancel_Alarm)
