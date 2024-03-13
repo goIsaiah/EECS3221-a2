@@ -896,11 +896,12 @@ void *client_thread(void *arg)
                 pthread_mutex_unlock(&event_mutex);
             } else {
                 DEBUG_PRINTF(
-                    "Cancel_Alarm event for alarm %d not handled by"
+                    "Cancel_Alarm event for alarm %d not handled by "
                     "thread %d\n",
                     event->alarmId,
                     thread->thread_id
                 );
+                pthread_mutex_unlock(&event_mutex);
             }
         }
         else if (event->type == View_Alarms) {
