@@ -911,24 +911,44 @@ void *client_thread(void *arg)
             printf("Display Thread %d Assigned:\n", thread->thread_id);
 
             if(alarm1 != NULL) {
-                printf(
-                    "Alarm(%d): Created at %ld: Assigned at %d %s "
-                    "Status %d\n",
-                    alarm1->alarm_id,
-                    alarm1->creation_time,
-                    alarm1->time,
-                    alarm1->message,
-                    alarm1->status);
+                if (alarm1->status == true) {
+                    printf(
+                        "Alarm(%d): Created at %ld: Assigned at %d %s "
+                        "Status active\n",
+                        alarm1->alarm_id,
+                        alarm1->creation_time,
+                        alarm1->time,
+                        alarm1->message);
+                }
+                else {
+                    printf(
+                        "Alarm(%d): Created at %ld: Assigned at %d %s "
+                        "Status suspended\n",
+                        alarm1->alarm_id,
+                        alarm1->creation_time,
+                        alarm1->time,
+                        alarm1->message);
+                }
             }
             if(alarm2 != NULL) {
-                printf(
-                    "Alarm(%d): Created at %ld: Assigned at %d %s "
-                    "Status %d\n",
-                    alarm2->alarm_id,
-                    alarm2->creation_time,
-                    alarm2->time,
-                    alarm2->message,
-                    alarm2->status);
+                if (alarm2->status == true) {
+                    printf(
+                        "Alarm(%d): Created at %ld: Assigned at %d %s "
+                        "Status active\n",
+                        alarm2->alarm_id,
+                        alarm2->creation_time,
+                        alarm2->time,
+                        alarm2->message);
+                }
+                else {
+                    printf(
+                        "Alarm(%d): Created at %ld: Assigned at %d %s "
+                        "Status suspended\n",
+                        alarm2->alarm_id,
+                        alarm2->creation_time,
+                        alarm2->time,
+                        alarm2->message);
+                }
             }
             pthread_mutex_unlock(&event_mutex);
         }
