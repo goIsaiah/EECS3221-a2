@@ -62,6 +62,7 @@ typedef struct alarm_t
     time_t creation_time;
     time_t expiration_time;
     bool change_status;
+    int time_left;
 } alarm_t;
 
 /**

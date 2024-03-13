@@ -358,6 +358,7 @@ void reactivate_alarm_in_list(int alarm_id) {
                 time(NULL),
                 alarm->message
             );
+            alarm->expiration_time = time(NULL) + alarm->time_left;
         }
         alarm = alarm->next;
     }
@@ -623,7 +624,7 @@ void *client_thread(void *arg)
          */
         if (status == ETIMEDOUT)
         {
-            if (alarm1 != NULL && alarm1->expiration_time <= time(NULL)) {
+            if (alarm1 != NULL && alarm1->expiration_time <= time(NULL) && alarm1->status == true) {
                 printf(
                     "Display Alarm Thread %d Removed Expired Alarm(%d) at "
                     "%ld: %d %s\n",
@@ -673,7 +674,7 @@ void *client_thread(void *arg)
                     alarm1->message);
             }
 
-            if (alarm2 != NULL && alarm2->expiration_time <= time(NULL)) {
+            if (alarm2 != NULL && alarm2->expiration_time <= time(NULL) && alarm2->status == true) {
                 printf(
                     "Display Alarm Thread %d Removed Expired Alarm(%d) at "
                     "%ld: %d %s\n",
@@ -817,6 +818,7 @@ void *client_thread(void *arg)
                     alarm1->message);
 
                 alarm1->status = false;
+                alarm1->time_left = alarm1->expiration_time - time(NULL);
             }
             else if (alarm2 != NULL
                      && alarm2->alarm_id == event->alarmId
@@ -829,6 +831,7 @@ void *client_thread(void *arg)
                     alarm2->message);
 
                 alarm2->status = false;
+                alarm2->time_left = alarm2->expiration_time - time(NULL);
             } else {
                 DEBUG_PRINTF(
                     "Suspend_Alarm command for alarm %d was not handled by"
@@ -1259,4 +1262,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-

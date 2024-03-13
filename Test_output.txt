@@ -45,3 +45,26 @@ New Display Alarm Thread 1 Created at 1710346804: 30 test1
 Alarm > Cancel_Alarm(1)
 Alarm > Display Alarm Thread (1) Removed Canceled Alarm(1) at 1710346807: test1
 Display Alarm Thread 1 Exiting at 1710346807
+
+Cancel_Alarm test with multiple threads:
+Alarm > Start_Alarm(1): 60 test1
+Alarm 1 Inserted Into Alarm List at 1710349765: 60 test1
+New Display Alarm Thread 0 Created at 1710349765: 60 test1
+Alarm > Start_Alarm(2): 60 test2
+Alarm 2 Inserted Into Alarm List at 1710349773: 60 test2
+Alarm > Start_Alarm(3): 60 test3
+Alarm 3 Inserted Into Alarm List at 1710349778: 60 test3
+New Display Alarm Thread 1 Created at 1710349778: 60 test3
+Alarm > Cancel_Alarm(3)
+Alarm > Display Alarm Thread (1) Removed Canceled Alarm(3) at 1710349783: test3
+Display Alarm Thread 1 Exiting at 1710349783
+========================================================================================================================
+Suspend_Alarm test:
+Alarm > Start_Alarm(1): 60 test1
+Alarm 1 Inserted Into Alarm List at 1710350365: 60 test1
+New Display Alarm Thread 0 Created at 1710350365: 60 test1
+Alarm (1) Printed by Alarm Display Thread 0 at 1710350370: 60 test1
+Alarm > Suspend_Alarm(1)
+Alarm > Alarm (1) Suspended at 1710350371: test1
+========================================================================================================================
+Reactivate_Alarm test:
