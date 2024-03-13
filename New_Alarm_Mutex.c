@@ -569,7 +569,27 @@ void *client_thread(void *arg)
         /*
          * Calculate timeout.
          */
-        if (alarm1 != NULL && alarm1->expiration_time - now < 5) {
+        if (alarm1 != NULL && alarm1->status == false) {
+            if (alarm2 != NULL && alarm2->expiration_time - now < 5) {
+                t.tv_sec = alarm2->expiration_time;
+            }
+            else {
+                // Set timeout to 5 seconds in the future because none of the
+                // alarms are expiring soon.
+                t.tv_sec = now + 5;
+            }
+        }
+        else if (alarm2 != NULL && alarm2->status == false) {
+            if (alarm1 != NULL && alarm1->expiration_time - now < 5) {
+                t.tv_sec = alarm1->expiration_time;
+            }
+            else {
+                // Set timeout to 5 seconds in the future because none of the
+                // alarms are expiring soon.
+                t.tv_sec = now + 5;
+            }
+        }
+        else if (alarm1 != NULL && alarm1->expiration_time - now < 5 && alarm1->status == true) {
             if (alarm2 == NULL) {
                 // Alarm 1 expires first
                 t.tv_sec = alarm1->expiration_time;
@@ -580,7 +600,7 @@ void *client_thread(void *arg)
                 // Alarm 2 expires first
                 t.tv_sec = alarm2->expiration_time;
             }
-        } else if (alarm2 != NULL && alarm2->expiration_time - now < 5) {
+        } else if (alarm2 != NULL && alarm2->expiration_time - now < 5 && alarm2->status == true) {
             if (alarm1 == NULL) {
                 // Alarm 2 expires first
                 t.tv_sec = alarm2->expiration_time;
@@ -593,7 +613,7 @@ void *client_thread(void *arg)
             }
         } else {
             // Set timeout to 5 seconds in the future because none of the
-            // alarmsare expiring soon.
+            // alarms are expiring soon.
             t.tv_sec = now + 5;
         }
         /*

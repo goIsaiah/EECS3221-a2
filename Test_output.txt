@@ -66,6 +66,26 @@ New Display Alarm Thread 0 Created at 1710350365: 60 test1
 Alarm (1) Printed by Alarm Display Thread 0 at 1710350370: 60 test1
 Alarm > Suspend_Alarm(1)
 Alarm > Alarm (1) Suspended at 1710350371: test1
+
+Suspend_Alarm test with multiple threads:
+Alarm > Start_Alarm(1): 10 test1
+Alarm 1 Inserted Into Alarm List at 1710372564: 10 test1
+New Display Alarm Thread 0 Created at 1710372564: 10 test1
+Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710372569: 10 test1
+Suspend_Alarm(1)
+Alarm > Alarm (1) Suspended at 1710372570: test1
+Start_Alarm(2): 20 test2
+Alarm 2 Inserted Into Alarm List at 1710372580: 20 test2
+Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710372585: 20 test2
+Start_Alarm(3): 10 test3
+Alarm 3 Inserted Into Alarm List at 1710372591: 10 test3
+New Display Alarm Thread 1 Created at 1710372591: 10 test3
+Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710372590: 20 test2
+Alarm (2) Printed by Alarm Display Thread 0 at 1710372595: 20 test2
+Alarm (3) Printed by Alarm Display Thread 1 at 1710372596: 10 test3
+Display Alarm Thread 0 Removed Expired Alarm(2) at 1710372600: 20 test2
+Display Alarm Thread 1 Removed Expired Alarm(3) at 1710372601: 10 test3
+Display Alarm Thread 1 Exiting at 1710372601
 ========================================================================================================================
 Reactivate_Alarm test:
 Alarm > Start_Alarm(1): 40 test1
@@ -84,5 +104,30 @@ Alarm (1) Printed by Alarm Display Thread 0 at 1710360319: 40 test1
 Alarm (1) Printed by Alarm Display Thread 0 at 1710360324: 40 test1
 Display Alarm Thread 0 Removed Expired Alarm(1) at 1710360325: 40 test1
 Display Alarm Thread 0 Exiting at 1710360325
+
+Reactivate_Alarm test with multiple threads:
+Alarm > Start_Alarm(1): 9 test1
+Alarm 1 Inserted Into Alarm List at 1710374052: 9 test1
+New Display Alarm Thread 0 Created at 1710374052: 9 test1
+Alarm > Suspend_Alarm(1)
+Alarm > Alarm (1) Suspended at 1710374056: test1
+Start_Alarm(2): 17 test2
+Alarm 2 Inserted Into Alarm List at 1710374061: 17 test2
+Alarm > Start_Alarm(3): 19 test3 Alarm (2)
+Printed by Alarm Display Thread 0 at 1710374066: 17 test2
+Alarm 3 Inserted Into Alarm List at 1710374068: 19 test3
+New Display Alarm Thread 1 Created at 1710374068: 19 test3
+Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710374071: 17 test2
+Alarm (3) Printed by Alarm Display Thread 1 at 1710374073: 19 test3
+Alarm (2) Printed by Alarm Display Thread 0 at 1710374076: 17 test2
+Alarm (3) Printed by Alarm Display Thread 1 at 1710374078: 19 test3
+Display Alarm Thread 0 Removed Expired Alarm(2) at 1710374078: 17 test2
+Alarm (3) Printed by Alarm Display Thread 1 at 1710374083: 19 test3
+Display Alarm Thread 1 Removed Expired Alarm(3) at 1710374087: 19 test3
+Display Alarm Thread 1 Exiting at 1710374087
+Reactivate_Alarm(1)
+Alarm (1) Reactivated at 1710374118: test1
+Alarm > Display Alarm Thread 0 Removed Expired Alarm(1) at 1710374123: 9 test1
+Display Alarm Thread 0 Exiting at 1710374123
 ========================================================================================================================
 View_Alarms test:
