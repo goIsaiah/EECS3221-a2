@@ -649,10 +649,22 @@ void *client_thread(void *arg)
             else if (alarm1 != NULL && alarm1->status == true)
             {
                 /*
-                 * If alarm 1 is defined in this thread, print it.
+                 * If the message for alarm1 has been recently changed, print that
+                 * the display thread is starting to print the new message.
                  */
+                if (alarm1->change_status == true) {
+                    printf(
+                        "Display Thread %d Starts to Print Changed Message at %ld: %s\n",
+                        thread->thread_id,
+                        time(NULL),
+                        alarm1->message);
+                    alarm1->change_status = false;
+                }
+                /*
+                * If alarm 1 is defined in this thread, print it.
+                */
                 printf(
-                    "Alarm (%d) Printed by Alarm Display Thread %d at"
+                    "Alarm (%d) Printed by Alarm Display Thread %d at "
                     "%ld: %d %s\n",
                     alarm1->alarm_id,
                     thread->thread_id,
@@ -687,10 +699,22 @@ void *client_thread(void *arg)
             else if (alarm2 != NULL && alarm2->status == true)
             {
                 /*
+                 * If the message for alarm2 has been recently changed, print that
+                 * the display thread is starting to print the new message.
+                 */
+                if (alarm2->change_status == true) {
+                    printf(
+                        "Display Thread %d Starts to Print Changed Message at %ld: %s\n",
+                        thread->thread_id,
+                        time(NULL),
+                        alarm2->message);
+                    alarm2->change_status = false;
+                }
+                /*
                  * If alarm 2 is defined in this thread, print it.
                  */
                 printf(
-                    "Alarm (%d) Printed by Alarm Display Thread %d at"
+                    "Alarm (%d) Printed by Alarm Display Thread %d at "
                     "%ld: %d %s\n",
                     alarm2->alarm_id,
                     thread->thread_id,
@@ -1114,13 +1138,16 @@ int main(int argc, char *argv[])
                 // Go through list and find the existing alarm using the ID
                 alarm_t *existing_alarm = find_alarm_by_id(command -> alarm_id);
                 
-                //Update the existing alarm time and message.                
+                // Update the existing alarm time and message.                
                 existing_alarm -> time = command -> time;
                 existing_alarm->expiration_time = existing_alarm->creation_time
                     + command->time;
                 strcpy(existing_alarm -> message, command -> message);
 
-                //Return display message showing alarm has changed.
+                // Tell the alarm that its message has been recently changed
+                alarm->change_status = true;
+
+                // Return display message showing alarm has changed.
                 printf(
                     "Alarm (%d) Changed at %ld: %s\n",
                     command->alarm_id,
