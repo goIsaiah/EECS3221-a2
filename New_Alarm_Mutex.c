@@ -1048,6 +1048,8 @@ int main(int argc, char *argv[])
                 alarm->status = true;
                 alarm->creation_time = time(NULL);
                 alarm->expiration_time = time(NULL) + alarm->time;
+                alarm->change_status = false;
+                alarm->time_left = 0;
 
                 /*
                  * Insert alarm into the list.
@@ -1169,7 +1171,7 @@ int main(int argc, char *argv[])
                 strcpy(existing_alarm -> message, command -> message);
 
                 // Tell the alarm that its message has been recently changed
-                alarm->change_status = true;
+                existing_alarm->change_status = true;
 
                 // Return display message showing alarm has changed.
                 printf(
@@ -1183,7 +1185,6 @@ int main(int argc, char *argv[])
             {
                 // Get the ID that will be cancellled
                 int cancelId = command->alarm_id;
-
                 int AlarmExists = doesAlarmExist(cancelId);
 
                 if (AlarmExists == 0)

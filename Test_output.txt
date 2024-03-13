@@ -68,3 +68,21 @@ Alarm > Suspend_Alarm(1)
 Alarm > Alarm (1) Suspended at 1710350371: test1
 ========================================================================================================================
 Reactivate_Alarm test:
+Alarm > Start_Alarm(1): 40 test1
+Alarm 1 Inserted Into Alarm List at 1710360274: 40 test1
+New Display Alarm Thread 0 Created at 1710360274: 40 test1
+Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710360279: 40 test1
+Alarm (1) Printed by Alarm Display Thread 0 at 1710360284: 40 test1
+Alarm (1) Printed by Alarm Display Thread 0 at 1710360289: 40 test1
+Alarm (1) Printed by Alarm Display Thread 0 at 1710360294: 40 test1
+Alarm > Suspend_Alarm(1)
+Alarm > Alarm (1) Suspended at 1710360298: test1
+Reactivate_Alarm(1)
+Alarm (1) Reactivated at 1710360309: test1
+Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710360314: 40 test1
+Alarm (1) Printed by Alarm Display Thread 0 at 1710360319: 40 test1
+Alarm (1) Printed by Alarm Display Thread 0 at 1710360324: 40 test1
+Display Alarm Thread 0 Removed Expired Alarm(1) at 1710360325: 40 test1
+Display Alarm Thread 0 Exiting at 1710360325
+========================================================================================================================
+View_Alarms test:
