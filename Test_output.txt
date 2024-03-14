@@ -131,3 +131,37 @@ Alarm > Display Alarm Thread 0 Removed Expired Alarm(1) at 1710374123: 9 test1
 Display Alarm Thread 0 Exiting at 1710374123
 ========================================================================================================================
 View_Alarms test:
+Alarm > Start_Alarm(1): 19 test1
+Alarm 1 Inserted Into Alarm List at 1710374750: 19 test1
+New Display Alarm Thread 0 Created at 1710374750: 19 test1
+Alarm > View_Alarms
+View Alarms at 1710374752: 
+Alarm > Display Thread 0 Assigned:
+Alarm(1): Created at 1710374750: Assigned at 19 test1 Status active
+
+View_Alarms test with multiple threads:
+Alarm > Start_Alarm(1): 19 test1
+Alarm 1 Inserted Into Alarm List at 1710374401: 19 test1
+New Display Alarm Thread 0 Created at 1710374401: 19 test1
+Alarm > Suspend_Alarm(1)
+Alarm > Alarm (1) Suspended at 1710374405: test1
+Start_Alarm(2): 18 test2
+Alarm 2 Inserted Into Alarm List at 1710374415: 18 test2
+Alarm > Start_Alarm(3): 17 test3
+Alarm 3 Inserted Into Alarm List at 1710374419: 17 test3
+New Display Alarm Thread 1 Created at 1710374419: 17 test3
+Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710374420: 18 test2
+Alarm (3) Printed by Alarm Display Thread 1 at 1710374424: 17 test3
+Alarm (2) Printed by Alarm Display Thread 0 at 1710374425: 18 test2
+Alarm (3) Printed by Alarm Display Thread 1 at 1710374429: 17 test3
+Alarm (2) Printed by Alarm Display Thread 0 at 1710374430: 18 test2
+View_Alarms
+View Alarms at 1710374432: 
+Alarm > Display Thread 0 Assigned:
+Alarm(1): Created at 1710374401: Assigned at 19 test1 Status suspended
+Alarm(2): Created at 1710374415: Assigned at 18 test2 Status active
+Display Thread 1 Assigned:
+Alarm(3): Created at 1710374419: Assigned at 17 test3 Status active
+Display Alarm Thread 0 Removed Expired Alarm(2) at 1710374433: 18 test2
+Display Alarm Thread 1 Removed Expired Alarm(3) at 1710374436: 17 test3
+Display Alarm Thread 1 Exiting at 1710374436
