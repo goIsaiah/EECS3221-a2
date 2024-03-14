@@ -358,7 +358,12 @@ void reactivate_alarm_in_list(int alarm_id) {
                 time(NULL),
                 alarm->message
             );
-            alarm->expiration_time = time(NULL) + alarm->time_left;
+            if (alarm->change_status = true) {
+                alarm->expiration_time = time(NULL) + alarm->time;
+            }
+            else {
+                alarm->expiration_time = time(NULL) + alarm->time_left;
+            }
         }
         alarm = alarm->next;
     }
@@ -1196,8 +1201,7 @@ int main(int argc, char *argv[])
                 
                 // Update the existing alarm time and message.                
                 existing_alarm -> time = command -> time;
-                existing_alarm->expiration_time = existing_alarm->creation_time
-                    + command->time;
+                existing_alarm->expiration_time = time(NULL) + command->time;
                 strcpy(existing_alarm -> message, command -> message);
 
                 // Tell the alarm that its message has been recently changed

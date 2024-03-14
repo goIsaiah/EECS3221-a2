@@ -22,21 +22,20 @@ Alarm > Start_Alarm(4): 90 test4
 Alarm 4 Inserted Into Alarm List at 1710343867: 90 test4
 ========================================================================================================================
 Change_Alarm test:
-Alarm > Start_Alarm(1): 35 original
-Alarm 1 Inserted Into Alarm List at 1710345702: 35 original
-New Display Alarm Thread 0 Created at 1710345702: 35 original
-Alarm (1) Printed by Alarm Display Thread 0 at 1710345707: 35 original
-Alarm > Change_Alarm(1): 40 changed message
-Alarm (1) Changed at 1710345709: changed message
-Alarm > Display Thread 0 Starts to Print Changed Message at 1710345714: changed message
-Alarm (1) Printed by Alarm Display Thread 0 at 1710345714: 40 changed message
-Alarm (1) Printed by Alarm Display Thread 0 at 1710345719: 40 changed message
-Alarm (1) Printed by Alarm Display Thread 0 at 1710345724: 40 changed message
-Alarm (1) Printed by Alarm Display Thread 0 at 1710345729: 40 changed message
-Alarm (1) Printed by Alarm Display Thread 0 at 1710345734: 40 changed message
-Alarm (1) Printed by Alarm Display Thread 0 at 1710345739: 40 changed message
-Display Alarm Thread 0 Removed Expired Alarm(1) at 1710345742: 40 changed message
-Display Alarm Thread 0 Exiting at 1710345742
+Alarm > Start_Alarm(1): 60 original
+Alarm 1 Inserted Into Alarm List at 1710382422: 60 original
+New Display Alarm Thread 0 Created at 1710382422: 60 original
+Alarm > Suspend_Alarm(1)
+Alarm (1) Printed by Alarm Display Thread 0 at 1710382427: 60 original
+Alarm > Alarm (1) Suspended at 1710382428: original
+Change_Alarm(1): 10 new
+Alarm (1) Changed at 1710382438: new
+Alarm > Reactivate_Alarm(1)
+Alarm (1) Reactivated at 1710382447: new
+Alarm > Display Thread 0 Starts to Print Changed Message at 1710382452: new
+Alarm (1) Printed by Alarm Display Thread 0 at 1710382452: 10 new
+Display Alarm Thread 0 Removed Expired Alarm(1) at 1710382457: 10 new
+Display Alarm Thread 0 Exiting at 1710382457
 ========================================================================================================================
 Cancel_Alarm test:
 Start_Alarm(1): 30 test1
