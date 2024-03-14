@@ -1,3 +1,17 @@
+EECS 3221 Z Assignment 2
+========================
+
+This is our Assignment 2 for EECS 3221 Z. It is a multithreaded alarm program
+that creates threads to hold alarms which can be changed by the user.
+
+The main file is `New_Alarm_Mutex.c`, but the files `errors.h`, `types.h`, and
+`debug.h` must be included in the same directory as the main file.
+
+See below for instructions on compiling, running, and testing the program.
+
+Compiling and Running
+---------------------
+
 1. First, copy the files "New_Alarm_Mutex.c", "debug.h", and "errors.h", 
    "Makefile", and "types.h" into your own directory.
 
@@ -11,45 +25,67 @@
    assignment document.  Any command that is not properly used or does not
    exist will output "Bad command".  To exit the program, press Ctrl + C.
 
-List of commands:
-"Start_Alarm" has the following format:
-   Alarm > Start_Alarm(Alarm_ID): Time Message
-For example:
-   Alarm > Start_Alarm(1): 50 test1
-will creare an alarm with the ID 1, it will contain the message "test1", and
-the alarm will expire after 50 seconds.
+List of Commands
+----------------
 
-"Change_Alarm" has the following format:
-   Alarm > Change_Alarm(Alarm_ID): Time Message
-For example:
-   Alarm > Change_Alarm(1): 60 test2
-will change the time and message of alarm with ID 1 to 60 seconds and "test2"
-respectiveley.
+- "Start_Alarm" has the following format:
 
-"Cancel_Alarm" has the following format:
-   Alarm > Cancel_Alarm(Alarm_ID)
-For example:
-   Alarm > Cancel_Alarm(1)
-will remove the alarm with ID 1 from the list and thread.  In order for this
-command to function properly, the alarm with the given ID needs to already
-exist.
+      Alarm > Start_Alarm(Alarm_ID): Time Message
 
-"Suspend_Alarm" has the following format:
-   Alarm > Suspend_Alarm(Alarm_ID)
-For example:
-   Alarm > Suspend_Alarm(1)
-will pause an alarm with ID 1, so it won't expire after its given time.  In
-order for this command to function properly, the alarm with the given ID
-needs to already exist.
+   For example:
 
-"Reactivate_Alarm" has the following format:
-   Alarm > Reactivate_Alarm(Alarm_ID)
-For example:
-   Alarm > Reactivate_Alarm(1)
-will resume the alarm with ID 1.  In order for this command to function properly,
-the alarm with the given ID will need to have been previously suspended using the
-"Suspend_Alarm" request.
+      Alarm > Start_Alarm(1): 50 test1
 
-"View_Alarms" has the following format:
-   Alarm > View_Alarms
-It will print all of the alarms that are currently in the list/thread.
+   will create an alarm with the ID 1, it will contain the message "test1", and
+   the alarm will expire after 50 seconds.
+
+- "Change_Alarm" has the following format:
+
+      Alarm > Change_Alarm(Alarm_ID): Time Message
+
+   For example:
+
+      Alarm > Change_Alarm(1): 60 test2
+
+   will change the time and message of alarm with ID 1 to 60 seconds and "test2"
+   respectively.
+
+- "Cancel_Alarm" has the following format:
+
+      Alarm > Cancel_Alarm(Alarm_ID)
+
+   For example:
+      Alarm > Cancel_Alarm(1)
+   will remove the alarm with ID 1 from the list and thread.  In order for this
+   command to function properly, the alarm with the given ID needs to already
+   exist.
+
+- "Suspend_Alarm" has the following format:
+
+      Alarm > Suspend_Alarm(Alarm_ID)
+
+   For example:
+
+      Alarm > Suspend_Alarm(1)
+
+   will pause an alarm with ID 1, so it won't expire after its given time.  In
+   order for this command to function properly, the alarm with the given ID
+   needs to already exist.
+
+- "Reactivate_Alarm" has the following format:
+
+      Alarm > Reactivate_Alarm(Alarm_ID)
+
+   For example:
+
+      Alarm > Reactivate_Alarm(1)
+
+   will resume the alarm with ID 1.  In order for this command to function
+   properly, the alarm with the given ID will need to have been previously
+   suspended using the "Suspend_Alarm" request.
+
+- "View_Alarms" has the following format:
+
+      Alarm > View_Alarms
+
+   It will print all of the alarms that are currently in the list/thread.

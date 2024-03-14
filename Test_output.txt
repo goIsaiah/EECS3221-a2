@@ -1,166 +1,197 @@
 NOTE: The messages printed to display the alarms after 5 seconds have been deleted in some cases
       to make the output easier to read
-========================================================================================================================
-Start_Alarm test with one alarm expiring soon:
-Alarm > Start_Alarm(1): 10 test1
-Alarm 1 Inserted Into Alarm List at 1710343762: 10 test1
-New Display Alarm Thread 0 Created at 1710343762: 10 test1
-Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710343767: 10 test1
-Display Alarm Thread 0 Removed Expired Alarm(1) at 1710343772: 10 test1
-Display Alarm Thread 0 Exiting at 1710343772
 
-Start_Alarm test with multiple threads:
-Alarm > Start_Alarm(1): 90 test1
-Alarm 1 Inserted Into Alarm List at 1710343844: 90 test1
-New Display Alarm Thread 1 Created at 1710343844: 90 test1
-Alarm > Start_Alarm(2): 90 test2
-Alarm 2 Inserted Into Alarm List at 1710343850: 90 test2
-Alarm > Start_Alarm(3): 90 test3
-Alarm 3 Inserted Into Alarm List at 1710343858: 90 test3
-New Display Alarm Thread 2 Created at 1710343858: 90 test3
-Alarm > Start_Alarm(4): 90 test4
-Alarm 4 Inserted Into Alarm List at 1710343867: 90 test4
 ========================================================================================================================
-Change_Alarm test:
-Alarm > Start_Alarm(1): 60 original
-Alarm 1 Inserted Into Alarm List at 1710382422: 60 original
-New Display Alarm Thread 0 Created at 1710382422: 60 original
-Alarm > Suspend_Alarm(1)
-Alarm (1) Printed by Alarm Display Thread 0 at 1710382427: 60 original
-Alarm > Alarm (1) Suspended at 1710382428: original
-Change_Alarm(1): 10 new
-Alarm (1) Changed at 1710382438: new
-Alarm > Reactivate_Alarm(1)
-Alarm (1) Reactivated at 1710382447: new
-Alarm > Display Thread 0 Starts to Print Changed Message at 1710382452: new
-Alarm (1) Printed by Alarm Display Thread 0 at 1710382452: 10 new
-Display Alarm Thread 0 Removed Expired Alarm(1) at 1710382457: 10 new
-Display Alarm Thread 0 Exiting at 1710382457
-========================================================================================================================
-Cancel_Alarm test:
-Start_Alarm(1): 30 test1
-Alarm 1 Inserted Into Alarm List at 1710346804: 30 test1
-New Display Alarm Thread 1 Created at 1710346804: 30 test1
-Alarm > Cancel_Alarm(1)
-Alarm > Display Alarm Thread (1) Removed Canceled Alarm(1) at 1710346807: test1
-Display Alarm Thread 1 Exiting at 1710346807
+Start_Alarm test with one alarm expiring soon. We expect the thread to print the
+alarm, then remove the alarm once expired, then remove itself from the program:
 
-Cancel_Alarm test with multiple threads:
-Alarm > Start_Alarm(1): 60 test1
-Alarm 1 Inserted Into Alarm List at 1710349765: 60 test1
-New Display Alarm Thread 0 Created at 1710349765: 60 test1
-Alarm > Start_Alarm(2): 60 test2
-Alarm 2 Inserted Into Alarm List at 1710349773: 60 test2
-Alarm > Start_Alarm(3): 60 test3
-Alarm 3 Inserted Into Alarm List at 1710349778: 60 test3
-New Display Alarm Thread 1 Created at 1710349778: 60 test3
-Alarm > Cancel_Alarm(3)
-Alarm > Display Alarm Thread (1) Removed Canceled Alarm(3) at 1710349783: test3
-Display Alarm Thread 1 Exiting at 1710349783
-========================================================================================================================
-Suspend_Alarm test:
-Alarm > Start_Alarm(1): 60 test1
-Alarm 1 Inserted Into Alarm List at 1710350365: 60 test1
-New Display Alarm Thread 0 Created at 1710350365: 60 test1
-Alarm (1) Printed by Alarm Display Thread 0 at 1710350370: 60 test1
-Alarm > Suspend_Alarm(1)
-Alarm > Alarm (1) Suspended at 1710350371: test1
+      Alarm > Start_Alarm(1): 10 test1
+      Alarm 1 Inserted Into Alarm List at 1710343762: 10 test1
+      New Display Alarm Thread 0 Created at 1710343762: 10 test1
+      Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710343767: 10 test1
+      Display Alarm Thread 0 Removed Expired Alarm(1) at 1710343772: 10 test1
+      Display Alarm Thread 0 Exiting at 1710343772
 
-Suspend_Alarm test with multiple threads:
-Alarm > Start_Alarm(1): 10 test1
-Alarm 1 Inserted Into Alarm List at 1710372564: 10 test1
-New Display Alarm Thread 0 Created at 1710372564: 10 test1
-Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710372569: 10 test1
-Suspend_Alarm(1)
-Alarm > Alarm (1) Suspended at 1710372570: test1
-Start_Alarm(2): 20 test2
-Alarm 2 Inserted Into Alarm List at 1710372580: 20 test2
-Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710372585: 20 test2
-Start_Alarm(3): 10 test3
-Alarm 3 Inserted Into Alarm List at 1710372591: 10 test3
-New Display Alarm Thread 1 Created at 1710372591: 10 test3
-Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710372590: 20 test2
-Alarm (2) Printed by Alarm Display Thread 0 at 1710372595: 20 test2
-Alarm (3) Printed by Alarm Display Thread 1 at 1710372596: 10 test3
-Display Alarm Thread 0 Removed Expired Alarm(2) at 1710372600: 20 test2
-Display Alarm Thread 1 Removed Expired Alarm(3) at 1710372601: 10 test3
-Display Alarm Thread 1 Exiting at 1710372601
-========================================================================================================================
-Reactivate_Alarm test:
-Alarm > Start_Alarm(1): 40 test1
-Alarm 1 Inserted Into Alarm List at 1710360274: 40 test1
-New Display Alarm Thread 0 Created at 1710360274: 40 test1
-Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710360279: 40 test1
-Alarm (1) Printed by Alarm Display Thread 0 at 1710360284: 40 test1
-Alarm (1) Printed by Alarm Display Thread 0 at 1710360289: 40 test1
-Alarm (1) Printed by Alarm Display Thread 0 at 1710360294: 40 test1
-Alarm > Suspend_Alarm(1)
-Alarm > Alarm (1) Suspended at 1710360298: test1
-Reactivate_Alarm(1)
-Alarm (1) Reactivated at 1710360309: test1
-Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710360314: 40 test1
-Alarm (1) Printed by Alarm Display Thread 0 at 1710360319: 40 test1
-Alarm (1) Printed by Alarm Display Thread 0 at 1710360324: 40 test1
-Display Alarm Thread 0 Removed Expired Alarm(1) at 1710360325: 40 test1
-Display Alarm Thread 0 Exiting at 1710360325
+Start_Alarm test with multiple threads. We expect multiple threads to be created
+to handle the many alarms as they are inserted into the alarm list:
 
-Reactivate_Alarm test with multiple threads:
-Alarm > Start_Alarm(1): 9 test1
-Alarm 1 Inserted Into Alarm List at 1710374052: 9 test1
-New Display Alarm Thread 0 Created at 1710374052: 9 test1
-Alarm > Suspend_Alarm(1)
-Alarm > Alarm (1) Suspended at 1710374056: test1
-Start_Alarm(2): 17 test2
-Alarm 2 Inserted Into Alarm List at 1710374061: 17 test2
-Alarm > Start_Alarm(3): 19 test3 Alarm (2)
-Printed by Alarm Display Thread 0 at 1710374066: 17 test2
-Alarm 3 Inserted Into Alarm List at 1710374068: 19 test3
-New Display Alarm Thread 1 Created at 1710374068: 19 test3
-Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710374071: 17 test2
-Alarm (3) Printed by Alarm Display Thread 1 at 1710374073: 19 test3
-Alarm (2) Printed by Alarm Display Thread 0 at 1710374076: 17 test2
-Alarm (3) Printed by Alarm Display Thread 1 at 1710374078: 19 test3
-Display Alarm Thread 0 Removed Expired Alarm(2) at 1710374078: 17 test2
-Alarm (3) Printed by Alarm Display Thread 1 at 1710374083: 19 test3
-Display Alarm Thread 1 Removed Expired Alarm(3) at 1710374087: 19 test3
-Display Alarm Thread 1 Exiting at 1710374087
-Reactivate_Alarm(1)
-Alarm (1) Reactivated at 1710374118: test1
-Alarm > Display Alarm Thread 0 Removed Expired Alarm(1) at 1710374123: 9 test1
-Display Alarm Thread 0 Exiting at 1710374123
+      Alarm > Start_Alarm(1): 90 test1
+      Alarm 1 Inserted Into Alarm List at 1710343844: 90 test1
+      New Display Alarm Thread 1 Created at 1710343844: 90 test1
+      Alarm > Start_Alarm(2): 90 test2
+      Alarm 2 Inserted Into Alarm List at 1710343850: 90 test2
+      Alarm > Start_Alarm(3): 90 test3
+      Alarm 3 Inserted Into Alarm List at 1710343858: 90 test3
+      New Display Alarm Thread 2 Created at 1710343858: 90 test3
+      Alarm > Start_Alarm(4): 90 test4
+      Alarm 4 Inserted Into Alarm List at 1710343867: 90 test4
 ========================================================================================================================
-View_Alarms test:
-Alarm > Start_Alarm(1): 19 test1
-Alarm 1 Inserted Into Alarm List at 1710374750: 19 test1
-New Display Alarm Thread 0 Created at 1710374750: 19 test1
-Alarm > View_Alarms
-View Alarms at 1710374752: 
-Alarm > Display Thread 0 Assigned:
-Alarm(1): Created at 1710374750: Assigned at 19 test1 Status active
+Change_Alarm test. We expect alarm 1 to have the time "10" and message "new"
+once the command is entered. We expect to see this the next time the thread
+prints the alarm:
 
-View_Alarms test with multiple threads:
-Alarm > Start_Alarm(1): 19 test1
-Alarm 1 Inserted Into Alarm List at 1710374401: 19 test1
-New Display Alarm Thread 0 Created at 1710374401: 19 test1
-Alarm > Suspend_Alarm(1)
-Alarm > Alarm (1) Suspended at 1710374405: test1
-Start_Alarm(2): 18 test2
-Alarm 2 Inserted Into Alarm List at 1710374415: 18 test2
-Alarm > Start_Alarm(3): 17 test3
-Alarm 3 Inserted Into Alarm List at 1710374419: 17 test3
-New Display Alarm Thread 1 Created at 1710374419: 17 test3
-Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710374420: 18 test2
-Alarm (3) Printed by Alarm Display Thread 1 at 1710374424: 17 test3
-Alarm (2) Printed by Alarm Display Thread 0 at 1710374425: 18 test2
-Alarm (3) Printed by Alarm Display Thread 1 at 1710374429: 17 test3
-Alarm (2) Printed by Alarm Display Thread 0 at 1710374430: 18 test2
-View_Alarms
-View Alarms at 1710374432: 
-Alarm > Display Thread 0 Assigned:
-Alarm(1): Created at 1710374401: Assigned at 19 test1 Status suspended
-Alarm(2): Created at 1710374415: Assigned at 18 test2 Status active
-Display Thread 1 Assigned:
-Alarm(3): Created at 1710374419: Assigned at 17 test3 Status active
-Display Alarm Thread 0 Removed Expired Alarm(2) at 1710374433: 18 test2
-Display Alarm Thread 1 Removed Expired Alarm(3) at 1710374436: 17 test3
-Display Alarm Thread 1 Exiting at 1710374436
+      Alarm > Start_Alarm(1): 60 original
+      Alarm 1 Inserted Into Alarm List at 1710382422: 60 original
+      New Display Alarm Thread 0 Created at 1710382422: 60 original
+      Alarm > Suspend_Alarm(1)
+      Alarm (1) Printed by Alarm Display Thread 0 at 1710382427: 60 original
+      Alarm > Alarm (1) Suspended at 1710382428: original
+      Change_Alarm(1): 10 new
+      Alarm (1) Changed at 1710382438: new
+      Alarm > Reactivate_Alarm(1)
+      Alarm (1) Reactivated at 1710382447: new
+      Alarm > Display Thread 0 Starts to Print Changed Message at 1710382452: new
+      Alarm (1) Printed by Alarm Display Thread 0 at 1710382452: 10 new
+      Display Alarm Thread 0 Removed Expired Alarm(1) at 1710382457: 10 new
+      Display Alarm Thread 0 Exiting at 1710382457
+========================================================================================================================
+Cancel_Alarm test. We expect the cancelled alarm to no longer print. We also
+expect the alarm to be removed from the list by the thread, and the thread to
+exit because all of its alarms are gone:
+
+      Start_Alarm(1): 30 test1
+      Alarm 1 Inserted Into Alarm List at 1710346804: 30 test1
+      New Display Alarm Thread 1 Created at 1710346804: 30 test1
+      Alarm > Cancel_Alarm(1)
+      Alarm > Display Alarm Thread (1) Removed Canceled Alarm(1) at 1710346807: test1
+      Display Alarm Thread 1 Exiting at 1710346807
+
+Cancel_Alarm test with multiple threads. We expect only the thread that owns
+alarm 3 to cancel the alarm. The other threads should remain unaffected and the
+thread that owns alarm 3 will remove the alarm.
+
+      Alarm > Start_Alarm(1): 60 test1
+      Alarm 1 Inserted Into Alarm List at 1710349765: 60 test1
+      New Display Alarm Thread 0 Created at 1710349765: 60 test1
+      Alarm > Start_Alarm(2): 60 test2
+      Alarm 2 Inserted Into Alarm List at 1710349773: 60 test2
+      Alarm > Start_Alarm(3): 60 test3
+      Alarm 3 Inserted Into Alarm List at 1710349778: 60 test3
+      New Display Alarm Thread 1 Created at 1710349778: 60 test3
+      Alarm > Cancel_Alarm(3)
+      Alarm > Display Alarm Thread (1) Removed Canceled Alarm(3) at 1710349783: test3
+      Display Alarm Thread 1 Exiting at 1710349783
+========================================================================================================================
+Suspend_Alarm test. We expect the thread that owns alarm 1 to print out that it
+has suspended the alarm. We expect the suspended alarm to no longer be printed
+by the thread, which is the case in this output.
+
+      Alarm > Start_Alarm(1): 60 test1
+      Alarm 1 Inserted Into Alarm List at 1710350365: 60 test1
+      New Display Alarm Thread 0 Created at 1710350365: 60 test1
+      Alarm (1) Printed by Alarm Display Thread 0 at 1710350370: 60 test1
+      Alarm > Suspend_Alarm(1)
+      Alarm > Alarm (1) Suspended at 1710350371: test1
+
+Suspend_Alarm test with multiple threads. We expect the other alarms to continue
+to be printed and expire even though the suspended alarm does nothing. As shown,
+alarms 2 and 3 print and expire while alarm 1 is suspended and neither prints
+nor expires:
+
+      Alarm > Start_Alarm(1): 10 test1
+      Alarm 1 Inserted Into Alarm List at 1710372564: 10 test1
+      New Display Alarm Thread 0 Created at 1710372564: 10 test1
+      Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710372569: 10 test1
+      Suspend_Alarm(1)
+      Alarm > Alarm (1) Suspended at 1710372570: test1
+      Start_Alarm(2): 20 test2
+      Alarm 2 Inserted Into Alarm List at 1710372580: 20 test2
+      Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710372585: 20 test2
+      Start_Alarm(3): 10 test3
+      Alarm 3 Inserted Into Alarm List at 1710372591: 10 test3
+      New Display Alarm Thread 1 Created at 1710372591: 10 test3
+      Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710372590: 20 test2
+      Alarm (2) Printed by Alarm Display Thread 0 at 1710372595: 20 test2
+      Alarm (3) Printed by Alarm Display Thread 1 at 1710372596: 10 test3
+      Display Alarm Thread 0 Removed Expired Alarm(2) at 1710372600: 20 test2
+      Display Alarm Thread 1 Removed Expired Alarm(3) at 1710372601: 10 test3
+      Display Alarm Thread 1 Exiting at 1710372601
+========================================================================================================================
+Reactivate_Alarm test. We expect the alarm to be suspended and stop printing
+while it is suspended. Once reactivated, we expect the alarm to resume printing
+and eventually expire, as if nothing had happened:
+
+      Alarm > Start_Alarm(1): 40 test1
+      Alarm 1 Inserted Into Alarm List at 1710360274: 40 test1
+      New Display Alarm Thread 0 Created at 1710360274: 40 test1
+      Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710360279: 40 test1
+      Alarm (1) Printed by Alarm Display Thread 0 at 1710360284: 40 test1
+      Alarm (1) Printed by Alarm Display Thread 0 at 1710360289: 40 test1
+      Alarm (1) Printed by Alarm Display Thread 0 at 1710360294: 40 test1
+      Alarm > Suspend_Alarm(1)
+      Alarm > Alarm (1) Suspended at 1710360298: test1
+      Reactivate_Alarm(1)
+      Alarm (1) Reactivated at 1710360309: test1
+      Alarm > Alarm (1) Printed by Alarm Display Thread 0 at 1710360314: 40 test1
+      Alarm (1) Printed by Alarm Display Thread 0 at 1710360319: 40 test1
+      Alarm (1) Printed by Alarm Display Thread 0 at 1710360324: 40 test1
+      Display Alarm Thread 0 Removed Expired Alarm(1) at 1710360325: 40 test1
+      Display Alarm Thread 0 Exiting at 1710360325
+
+Reactivate_Alarm test with multiple threads. We expect the thread that has alarm
+3 to keep the alarm suspended even as other threads and alarms continue to print
+and expire. The thread keeps alarm 3 until we reactivate it, where it prints and
+eventually expires:
+
+      Alarm > Start_Alarm(1): 9 test1
+      Alarm 1 Inserted Into Alarm List at 1710374052: 9 test1
+      New Display Alarm Thread 0 Created at 1710374052: 9 test1
+      Alarm > Suspend_Alarm(1)
+      Alarm > Alarm (1) Suspended at 1710374056: test1
+      Start_Alarm(2): 17 test2
+      Alarm 2 Inserted Into Alarm List at 1710374061: 17 test2
+      Alarm > Start_Alarm(3): 19 test3 Alarm (2)
+      Printed by Alarm Display Thread 0 at 1710374066: 17 test2
+      Alarm 3 Inserted Into Alarm List at 1710374068: 19 test3
+      New Display Alarm Thread 1 Created at 1710374068: 19 test3
+      Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710374071: 17 test2
+      Alarm (3) Printed by Alarm Display Thread 1 at 1710374073: 19 test3
+      Alarm (2) Printed by Alarm Display Thread 0 at 1710374076: 17 test2
+      Alarm (3) Printed by Alarm Display Thread 1 at 1710374078: 19 test3
+      Display Alarm Thread 0 Removed Expired Alarm(2) at 1710374078: 17 test2
+      Alarm (3) Printed by Alarm Display Thread 1 at 1710374083: 19 test3
+      Display Alarm Thread 1 Removed Expired Alarm(3) at 1710374087: 19 test3
+      Display Alarm Thread 1 Exiting at 1710374087
+      Reactivate_Alarm(1)
+      Alarm (1) Reactivated at 1710374118: test1
+      Alarm > Display Alarm Thread 0 Removed Expired Alarm(1) at 1710374123: 9 test1
+      Display Alarm Thread 0 Exiting at 1710374123
+========================================================================================================================
+View_Alarms test. We expect one thread to print one alarm:
+
+      Alarm > Start_Alarm(1): 19 test1
+      Alarm 1 Inserted Into Alarm List at 1710374750: 19 test1
+      New Display Alarm Thread 0 Created at 1710374750: 19 test1
+      Alarm > View_Alarms
+      View Alarms at 1710374752: 
+      Alarm > Display Thread 0 Assigned:
+      Alarm(1): Created at 1710374750: Assigned at 19 test1 Status active
+
+View_Alarms test with multiple threads. We expect each thread to print each of
+their alarms:
+
+      Alarm > Start_Alarm(1): 19 test1
+      Alarm 1 Inserted Into Alarm List at 1710374401: 19 test1
+      New Display Alarm Thread 0 Created at 1710374401: 19 test1
+      Alarm > Suspend_Alarm(1)
+      Alarm > Alarm (1) Suspended at 1710374405: test1
+      Start_Alarm(2): 18 test2
+      Alarm 2 Inserted Into Alarm List at 1710374415: 18 test2
+      Alarm > Start_Alarm(3): 17 test3
+      Alarm 3 Inserted Into Alarm List at 1710374419: 17 test3
+      New Display Alarm Thread 1 Created at 1710374419: 17 test3
+      Alarm > Alarm (2) Printed by Alarm Display Thread 0 at 1710374420: 18 test2
+      Alarm (3) Printed by Alarm Display Thread 1 at 1710374424: 17 test3
+      Alarm (2) Printed by Alarm Display Thread 0 at 1710374425: 18 test2
+      Alarm (3) Printed by Alarm Display Thread 1 at 1710374429: 17 test3
+      Alarm (2) Printed by Alarm Display Thread 0 at 1710374430: 18 test2
+      View_Alarms
+      View Alarms at 1710374432: 
+      Alarm > Display Thread 0 Assigned:
+      Alarm(1): Created at 1710374401: Assigned at 19 test1 Status suspended
+      Alarm(2): Created at 1710374415: Assigned at 18 test2 Status active
+      Display Thread 1 Assigned:
+      Alarm(3): Created at 1710374419: Assigned at 17 test3 Status active
+      Display Alarm Thread 0 Removed Expired Alarm(2) at 1710374433: 18 test2
+      Display Alarm Thread 1 Removed Expired Alarm(3) at 1710374436: 17 test3
+      Display Alarm Thread 1 Exiting at 1710374436
